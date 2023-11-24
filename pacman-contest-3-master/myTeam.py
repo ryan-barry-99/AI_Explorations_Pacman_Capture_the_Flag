@@ -16,6 +16,7 @@ from captureAgents import CaptureAgent
 import random, time, util
 from game import Directions
 import game
+import json
 
 #################
 # Team creation #
@@ -44,37 +45,87 @@ def createTeam(firstIndex, secondIndex, isRed,
 ##########
 # Agents #
 ##########
-
+         
 class QLearningCaptureAgent(CaptureAgent): 
-  def __init__(self, index, epsilon=0.1, alpha=0.5, discount=0.9):
+  def __init__(self, index, epsilon=0.5, alpha=0.2, discount=0.8):
     CaptureAgent.__init__(self, index)
     # Initialize variables
     self.epsilon = epsilon  # Exploration rate
     self.alpha = alpha      # Learning rate
     self.discount = discount# Discount factor
+    self.weights = json.load(open('weights.json', 'r'))
     # Initialize Q-values dictionary
     self.qValues = util.Counter()
   
   def chooseAction(self, gameState):
     # Get legal actions
     actions = gameState.getLegalActions(self.index)
-    # Get Q-values for current state
-    qValues = [self.getQValue(gameState, a) for a in actions]
     # Choose action using epsilon-greedy policy
     if util.flipCoin(self.epsilon):
       # Explore: choose random action
       return random.choice(actions)
     else:
       # Exploit: choose action with highest Q-value
-      return actions[qValues.index(max(qValues))] 
+      return actions[self.getMaxQ(gameState)]
   
-  # Get Q-value for a state-action pair
-  def getQValue(self, state, action): 
-    return self.qValues[(state, action)]
+  def getFeatures(self, gameState, action):
+    features = util.Counter()
+    # Calculate feature values based on the state-action pair
+    features['closest-food'] = self.calculate_closest_food(gameState)
+    features['bias'] = 1.0
+    features['#-of-ghosts-1-step-away'] = self.calculate_ghosts_1_step_away(gameState, action)
+    features['successorScore'] = self.calculate_successor_score(gameState, action)
+    features['eats-food'] = self.calculate_eats_food(gameState, action)
+    return features
   
-  # Update Q-values after taking action and observing result
+  
+  def getQValue(self, gameState, action): 
+    """
+    Calculate the Q values by multiplying training weights with features
+    Features include closest food, bias, and ghoset distance
+    """
+    return self.weights * self.getFeatures(gameState, action)
+  
+  
   def update(self, state, action, nextState, reward):
+    """
+    Update Q-values after taking action and observing result
+    """
     self.qValues[(state, action)] = (1 - self.alpha) * self.getQValue(state, action) + self.alpha * (reward + self.discount * max(self.qValues[nextState]))
+
+  def getMaxQ(self, gameState):
+    """
+    Get maximum Q-value for current state
+    """
+    return max([self.getQValue(gameState, a) for a in gameState.getLegalActions(self.index)])
+  
+  def calculate_closest_food(self, gameState):
+    """
+    Calculate the closest food distance
+    Returns None if no food is left
+    """
+    foodList = self.getFood(gameState).asList()
+    if foodList:
+      return min([self.getMazeDistance(gameState.getPacmanPosition(), food) for food in foodList])
+    else:
+      return None
+
+  def calculate_ghosts_1_step_away(self, gameState, action):
+    """
+    Calculate the number of ghosts 1 step away
+    """
+    ghosts = []
+    opponents = self.getOpponents(gameState)
+    if opponents:
+      for opponent in opponents:
+        if not gameState.getAgentState(opponent).isPacman:
+          ghosts.append(gameState.getAgentPosition(opponent))
+  
+
+
+
+
+
 
 class DummyAgent(CaptureAgent):
   """
