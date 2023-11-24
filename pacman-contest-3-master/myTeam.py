@@ -59,7 +59,7 @@ class QLearningCaptureAgent(CaptureAgent):
     # Call the parent class's registerInitialState() method
     super().registerInitialState(gameState)
     # Initialize variables
-    self.epsilon = 0.5  # Exploration rate
+    self.epsilon = 0.7  # Exploration rate
     self.alpha = 0.2      # Learning rate
     self.discount = 0.8 # Discount factor
     # Initialize Q-values dictionary
@@ -77,13 +77,9 @@ class QLearningCaptureAgent(CaptureAgent):
       # Exploit: choose action with highest Q-value
       maxq, best_action = self.getMaxQ(gameState)
       self.update(gameState, best_action)
+      self.updateWeights(gameState, best_action)
       return best_action
   
-  def getFeatures(self, gameState, action):
-    """
-    Function to get the features for the state
-    """
-    pass
   
   
   def getQValue(self, gameState, action): 
@@ -94,7 +90,6 @@ class QLearningCaptureAgent(CaptureAgent):
     successor = gameState.generateSuccessor(self.index, action)
     reward = self.getReward(gameState)
     self.qValues[(gameState, action)] = (1 - self.alpha) * self.getQValue(gameState, action) + self.alpha * (reward + self.discount * self.getMaxQ(successor)[0])
-    self.save_weights()
 
 
   def getMaxQ(self, gameState):
@@ -107,7 +102,7 @@ class QLearningCaptureAgent(CaptureAgent):
     else:
       qvals = []
       maxq = float('-inf')
-      best_action = None
+      best_action = Directions.STOP
       for action in legalActions:
         qval = self.getQValue(gameState, action)
         qvals.append(qval)
@@ -115,12 +110,7 @@ class QLearningCaptureAgent(CaptureAgent):
           maxq = qval
           best_action = action        
     return maxq, best_action
-  
-  def getReward(self, gameState):
-    """
-    Get reward for the action at a given state
-    """
-    pass
+ 
 
 
   def getSuccessor(self, gameState, action):
@@ -140,19 +130,15 @@ class QLearningCaptureAgent(CaptureAgent):
     Update the weights
     """
     nextState = self.getSuccessor(gameState, action)
-    reward = self.getReward(gameState, action)
+    reward = self.getReward(gameState)
     # correction = (reward + self.discountRate*self.getValue(nextState)) - self.getQValue(gameState, action)
     difference = (reward + self.discount * self.getMaxQ(nextState)[0]) - self.getQValue(gameState, action)
-    for feature in self.features:
-      self.weights[feature] += self.alpha * difference * self.features[feature]
+    features = self.getFeatures(gameState, action)
+    for feature in features:
+      self.weights[feature] += self.alpha * difference * features[feature]
     # print(self.weights)
     self.save_weights()
 
-  def save_weights(self):
-    """
-    Save weights to file
-    """
-    json.dump(self.weights, open('weights.json', 'w'))
   
 class QLearningOffensiveAgent(QLearningCaptureAgent):
   def __init__(self, index):
@@ -255,9 +241,8 @@ class QLearningDefensiveAgent(QLearningCaptureAgent):
 
     # Distance to home
     dist = self.getMazeDistance(myPos, self.startPosition) 
-    if dist == 0:
-      dist = 0.0001
-    features['distance_to_home'] = weights['distance_to_home'] * (1.0/dist)
+    if dist:
+      features['distance_to_home'] = weights['distance_to_home'] * (1.0/dist)
     
 
     # Invaders captured
