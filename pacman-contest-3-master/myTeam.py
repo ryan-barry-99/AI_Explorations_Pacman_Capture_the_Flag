@@ -80,15 +80,10 @@ class QLearningCaptureAgent(CaptureAgent):
       return best_action
   
   def getFeatures(self, gameState, action):
-    self.features = util.Counter()
-    successor = self.getSuccessor(gameState, action)
-    # Calculate feature values based on the state-action pair
-    self.features['closest-food'] = self.calculate_closest_food(gameState)/10
-    self.features['bias'] = 1.0/10
-    self.features['#-of-ghosts-1-step-away'] = self.calculate_ghosts_1_step_away(gameState, action)/10
-    self.features['successorScore'] = self.getScore(successor)/10
-    self.features['eats-food'] = self.calculate_eats_food(gameState, action)/10
-    return self.features
+    """
+    Function to get the features for the state
+    """
+    pass
   
   
   def getQValue(self, gameState, action): 
@@ -139,46 +134,6 @@ class QLearningCaptureAgent(CaptureAgent):
       return successor.generateSuccessor(self.index, action)
     else:
       return successor
-
-
-  def calculate_closest_food(self, gameState):
-    """
-    Calculate the closest food distance
-    Returns None if no food is left
-    """
-    foodList = self.getFood(gameState).asList()
-    if foodList:
-      return min([self.getMazeDistance(gameState.getAgentPosition(self.index), food) for food in foodList])
-    else:
-      return None
-
-  def calculate_ghosts_1_step_away(self, gameState, action):
-    """
-    Calculate the number of ghosts 1 step away
-    """
-    ghosts = []
-    opponents = self.getOpponents(gameState)
-    if opponents:
-      for opponent in opponents:
-        if not gameState.getAgentState(opponent).isPacman:
-          ghosts.append(gameState.getAgentPosition(opponent))
-          
-    x, y = gameState.getAgentPosition(self.index)
-    dx, dy = game.Actions.directionToVector(action)
-    self.ix, self.iy = int(x + dx), int(y + dy)
-    
-    self.numGhosts = sum([(self.ix, self.iy) == ghost for ghost in ghosts])
-    
-    return self.numGhosts
-    
-  def calculate_eats_food(self, gameState, action):
-    """
-    Calculate if the action eats food
-    """
-    x, y = gameState.getAgentPosition(self.index)
-    dx, dy = game.Actions.directionToVector(action)
-    self.ix, self.iy = int(x + dx), int(y + dy)
-    return self.getFood(gameState)[self.ix][self.iy]
 
   def updateWeights(self, gameState, action):
     """
