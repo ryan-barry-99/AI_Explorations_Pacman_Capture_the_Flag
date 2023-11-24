@@ -216,6 +216,17 @@ class QLearningOffensiveAgent(QLearningCaptureAgent):
     if myDist:
         reward += 1.0/min(myDist)
         
+    enemies = [gameState.getAgentState(i) for i in self.getOpponents(gameState)]
+    enemyGhosts = [a for a in enemies if a.isPacman == False and a.getPosition() != None]
+    
+    if len(enemyGhosts) > 0:
+      myPos = gameState.getAgentState(self.index).getPosition() 
+      closestGhostDist = min([self.getMazeDistance(myPos, g.getPosition()) for g in enemyGhosts])  
+      if closestGhostDist <= 5:
+        capsules = self.getCapsulesYouCanEat(gameState)  
+        if len(capsules) > 0:
+          reward += 10 # Additional reward for going after capsule when ghost is close
+        
     return reward
   
   def save_weights(self):
