@@ -23,7 +23,7 @@ import json
 #################
 
 def createTeam(firstIndex, secondIndex, isRed,
-               first = 'QLearningCaptureAgent', second = 'QLearningCaptureAgent'):
+               first = 'QLearningOffensiveAgent', second = 'QLearningDefensiveAgent'):
   """
   This function should return a list of two agents that will form the
   team, initialized using firstIndex and secondIndex as their agent
@@ -45,7 +45,8 @@ def createTeam(firstIndex, secondIndex, isRed,
 ##########
 # Agents #
 ##########
-         
+
+
 class QLearningCaptureAgent(CaptureAgent): 
   def __init__(self, index):
     CaptureAgent.__init__(self, index)
@@ -58,10 +59,9 @@ class QLearningCaptureAgent(CaptureAgent):
     # Call the parent class's registerInitialState() method
     super().registerInitialState(gameState)
     # Initialize variables
-    self.epsilon = 0.0  # Exploration rate
+    self.epsilon = 0.5  # Exploration rate
     self.alpha = 0.2      # Learning rate
-    self.discount = 0.8# Discount factor
-    self.weights = json.load(open('weights.json', 'r'))
+    self.discount = 0.8 # Discount factor
     # Initialize Q-values dictionary
     self.qValues = util.Counter()
     self.startPosition = gameState.getAgentPosition(self.index)
@@ -76,6 +76,7 @@ class QLearningCaptureAgent(CaptureAgent):
     else:
       # Exploit: choose action with highest Q-value
       maxq, best_action = self.getMaxQ(gameState)
+      self.update(gameState, best_action)
       return best_action
   
   def getFeatures(self, gameState, action):
@@ -91,27 +92,15 @@ class QLearningCaptureAgent(CaptureAgent):
   
   
   def getQValue(self, gameState, action): 
-    """
-    Calculate the Q values by multiplying training weights with features
-    Features include closest food, bias, and ghoset distance
-    """
-    qval = sum(self.getFeatures(gameState, action)[f] * self.weights[f] for f in self.getFeatures(gameState, action))
-    # print(qval)
-    # return self.getFeatures(gameState, action) * self.weights
-    self.update(gameState, action, gameState.generateSuccessor(self.index, action), self.getReward(gameState, action))
-    return qval
- 
- 
-  def update(self, gameState, action, nextState, reward):
-    """
-    Update Q-values after taking action and observing result
-    """
-    # print("In update step")
-    self.getFeatures(gameState, action)
-    # self.qValues[(gameState, action)] = self.qValues[(gameState, action)] + self.alpha * (reward + self.discount * self.getMaxQ(nextState) - self.qValues[(gameState, action)])
-    self.qValues[(gameState, action)] = (1 - self.alpha) * self.getQValue(gameState, action) + self.alpha * (reward + self.discount * max(self.qValues[nextState]))
-    # updateWeights(gameState, action)
-    print(self.qValues)
+    return sum(self.getFeatures(gameState, action)[f] * self.weights[f] for f in self.getFeatures(gameState, action))
+
+
+  def update(self, gameState, action):
+    successor = gameState.generateSuccessor(self.index, action)
+    reward = self.getReward(gameState)
+    self.qValues[(gameState, action)] = (1 - self.alpha) * self.getQValue(gameState, action) + self.alpha * (reward + self.discount * self.getMaxQ(successor)[0])
+    self.save_weights()
+
 
   def getMaxQ(self, gameState):
     """
@@ -129,29 +118,15 @@ class QLearningCaptureAgent(CaptureAgent):
         qvals.append(qval)
         if qval > maxq:
           maxq = qval
-          best_action = action
-      # self.updateWeights(gameState, best_action)
-        
+          best_action = action        
     return maxq, best_action
   
-  def getReward(self, gameState, action):
+  def getReward(self, gameState):
     """
     Get reward for the action at a given state
     """
-    successor = self.getSuccessor(gameState, action)
-    currentPosition = gameState.getAgentPosition(self.index)
-    nextPosition = successor.getAgentPosition(self.index)
-    reward = 0
-    # Negative reward for being within a maze distance of 10 from the starting position
-    if self.getMazeDistance(currentPosition, self.startPosition) <= 10:
-        reward -= 1
-    else:
-        # Positive reward for moving away from the starting position
-        reward += 1
-    # Positive reward for eating food
-    if self.getFood(gameState)[int(nextPosition[0])][int(nextPosition[1])]:
-        reward += 1
-    return successor.getScore() - gameState.getScore()
+    pass
+
 
   def getSuccessor(self, gameState, action):
     """
@@ -222,9 +197,195 @@ class QLearningCaptureAgent(CaptureAgent):
     """
     Save weights to file
     """
-    print("saving weights")
     json.dump(self.weights, open('weights.json', 'w'))
   
+class QLearningOffensiveAgent(QLearningCaptureAgent):
+  def __init__(self, index):
+    super().__init__(index)
+    self.weights = json.load(open('offensiveWeights.json', 'r'))
+  
+  def getFeatures(self, gameState, action):
+    features = util.Counter()
+
+    # Distance to closest food
+    myPos = gameState.getAgentState(self.index).getPosition()
+    foodList = self.getFood(gameState).asList()  
+    if foodList:
+        minDistance = min([self.getMazeDistance(myPos, food) for food in foodList])
+        features['distance_to_food'] = 1.0 / minDistance
+
+    # Food eaten
+    features['food_eaten'] = self.getFood(gameState)[int(myPos[0])][int(myPos[1])]
+
+    # Avoid ghosts
+    enemies = [gameState.getAgentState(i) for i in self.getOpponents(gameState)]
+    ghosts = [e for e in enemies if not e.isPacman and e.getPosition() != None]
+    if ghosts:
+        minDistance = min([self.getMazeDistance(myPos, g.getPosition()) for g in ghosts])
+        if minDistance > 1:
+            features['avoided_ghost'] = 1 * 0.7
+
+    # Carrying food
+    features['carrying_food'] = gameState.getAgentState(self.index).numCarrying
+    
+    # Distance to capsules
+    capsules = self.getCapsulesYouAreDefending(gameState) 
+    if capsules:
+        minDistance = min([self.getMazeDistance(myPos, c) for c in capsules])
+        if minDistance > 1:
+            features['distance_to_capsule'] = 1.0 / minDistance
+
+    return features
+  
+  def getReward(self, gameState):
+    """
+    Get the reward for the state 
+    """
+    reward = 0
+
+    # Get useful info 
+    myPos = gameState.getAgentPosition(self.index)
+    foodList = self.getFood(gameState).asList()
+    capsules = self.getCapsules(gameState)
+    
+    # Reward for eating food
+    if gameState.hasFood(myPos[0], myPos[1]):
+        reward += 10
+        
+    # Reward for eating capsule
+    if myPos in capsules:
+        reward += 50
+        
+    # Reward for getting closer to food 
+    myDist = [self.getMazeDistance(myPos, food) for food in foodList]
+    if myDist:
+        reward += 1.0/min(myDist)
+        
+    return reward
+  
+  def save_weights(self):
+    """
+    Save weights to file
+    """
+    json.dump(self.weights, open('offensiveWeights.json', 'w'))
+  
+class QLearningDefensiveAgent(QLearningCaptureAgent):
+  def __init__(self, index):
+    super().__init__(index)
+    self.weights = json.load(open('defensiveWeights.json', 'r'))
+  
+  def getFeatures(self, gameState, action):
+    features = util.Counter()
+    weights = {
+        "distance_to_home": 0.9, 
+        "invader_captured": 0.8,
+        "food_protected": 0.7,  
+        "avoided_ghost": 0.6,  
+        "ambush_location": 0.5
+    }
+
+    myState = gameState.getAgentState(self.index)
+    myPos = myState.getPosition()
+
+    # Distance to home
+    dist = self.getMazeDistance(myPos, self.startPosition) 
+    if dist == 0:
+      dist = 0.0001
+    features['distance_to_home'] = weights['distance_to_home'] * (1.0/dist)
+    
+
+    # Invaders captured
+    enemies = [gameState.getAgentState(i) for i in self.getOpponents(gameState)]
+    invaders = [a for a in enemies if a.isPacman and a.getPosition() != None]
+    features['invader_captured'] = weights['invader_captured'] * len(invaders)
+
+    # Food left
+    foodLeft = len(self.getFood(gameState).asList())
+    features['food_protected'] = weights['food_protected'] * foodLeft
+
+    # Avoided ghosts
+    if features['invader_captured'] > 0:
+        features['avoided_ghost'] = weights['avoided_ghost']
+
+    # Ambush spots (would need more logic here)
+    features['ambush_location'] = weights['ambush_location']
+
+    return features
+  
+  def getInvaders(self, gameState):
+        """
+        Get the invaders in the current state
+        """
+        invaders = []
+        enemies = [gameState.getAgentState(i) for i in self.getOpponents(gameState)]
+
+        for enemy in enemies:
+            if enemy.isPacman and enemy.getPosition() is not None:
+                invaders.append(enemy.getPosition())
+
+        return invaders
+      
+  def gotCaptured(self, gameState):
+        """
+        Check if the agent has captured invaders in the current state
+        """
+        myState = gameState.getAgentState(self.index)
+        myPos = myState.getPosition()
+
+        opponents = self.getOpponents(gameState)
+        invaders = [gameState.getAgentState(i) for i in opponents if gameState.getAgentState(i).isPacman]
+
+        for invader in invaders:
+            invaderPos = invader.getPosition()
+            if invaderPos is not None and self.getMazeDistance(myPos, invaderPos) <= 1:
+                return True
+
+        return False
+      
+  def getDistanceToHome(self, gameState):
+        """
+        Calculate the distance from the current position to the friendly side's center
+        """
+        myPos = gameState.getAgentPosition(self.index)
+        home = self.startPosition
+
+        # Adjust home position based on team (red or blue)
+        if self.red:
+            home = (gameState.data.layout.width // 2 - 1, gameState.data.layout.height // 2 - 1)
+        else:
+            home = (gameState.data.layout.width // 2, gameState.data.layout.height // 2)
+
+        return self.getMazeDistance(myPos, home)
+      
+  def getReward(self, gameState):
+    reward = 0
+
+    # Reward for each food dot left in our side
+    for food in self.getFoodYouAreDefending(gameState).asList():
+        reward += 1
+    
+    # Penalize if invaders are in our side
+    for invader in self.getInvaders(gameState): 
+        reward -= 2
+
+    # Big reward for catching invaders 
+    if self.gotCaptured(gameState):
+        reward += 10
+
+    # Reward for staying closer to our side
+    dist = self.getDistanceToHome(gameState) 
+    if dist <= 5:
+        reward += 0.5
+
+    return reward
+  
+  def save_weights(self):
+    """
+    Save weights to file
+    """
+    json.dump(self.weights, open('defensiveWeights.json', 'w'))
+  
+     
 
 
 
