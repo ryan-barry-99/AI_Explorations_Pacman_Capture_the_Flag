@@ -69,14 +69,15 @@ class QLearningCaptureAgent(CaptureAgent):
       return actions[self.getMaxQ(gameState)]
   
   def getFeatures(self, gameState, action):
-    features = util.Counter()
+    self.features = util.Counter()
+    successor = self.getSuccessor(gameState, action)
     # Calculate feature values based on the state-action pair
-    features['closest-food'] = self.calculate_closest_food(gameState)
-    features['bias'] = 1.0
-    features['#-of-ghosts-1-step-away'] = self.calculate_ghosts_1_step_away(gameState, action)
-    features['successorScore'] = self.calculate_successor_score(gameState, action)
-    features['eats-food'] = self.calculate_eats_food(gameState, action)
-    return features
+    self.features['closest-food'] = self.calculate_closest_food(gameState)
+    self.features['bias'] = 1.0
+    self.features['#-of-ghosts-1-step-away'] = self.calculate_ghosts_1_step_away(gameState, action)
+    self.features['successorScore'] = self.calculate_successor_score(successor)
+    self.features['eats-food'] = self.calculate_eats_food(gameState, action)
+    return self.features
   
   
   def getQValue(self, gameState, action): 
@@ -87,18 +88,48 @@ class QLearningCaptureAgent(CaptureAgent):
     return self.weights * self.getFeatures(gameState, action)
   
   
-  def update(self, state, action, nextState, reward):
+  def update(self, gameState, action, nextState, reward):
     """
     Update Q-values after taking action and observing result
     """
-    self.qValues[(state, action)] = (1 - self.alpha) * self.getQValue(state, action) + self.alpha * (reward + self.discount * max(self.qValues[nextState]))
+    self.getFeatures(gameState, action)
+    self.qValues[(gameState, action)] = self.qValues[(gameState, action)] + self.alpha * (reward + self.discount * self.getMaxQ(nextState) - self.qValues[(gameState, action)])
+    # self.qValues[(gameState, action)] = (1 - self.alpha) * self.getQValue(gameState, action) + self.alpha * (reward + self.discount * max(self.qValues[nextState]))
 
-  def getMaxQ(self, gameState):
+
+  def getMaxQ(self, gameState, action):
     """
     Get maximum Q-value for current state
     """
+    legalActions = gameState.getLegalActions(self.index)
+    if not legalActions:
+      return None
+    else:
+      qvals = []
+      for action in legalActions:
+        self.updateWeights
+        qvals.append(self.getQValue(gameState, action))
     return max([self.getQValue(gameState, a) for a in gameState.getLegalActions(self.index)])
   
+  def getReward(self, gameState, action):
+    """
+    Get reward for the action at a given state
+    """
+    return self.getScore(self.getSuccessor(gameState, action)) - self.getScore(gameState)
+
+  def getSuccessor(self, gameState, action):
+    """
+    Finds the next successor which is a grid position (location tuple).
+    """
+    successor = gameState.generateSuccessor(self.index, action)
+    pos = successor.getAgentState(self.index).getPosition()
+    if pos != util.nearestPoint(pos): 
+      # Only half a grid position was covered
+      return successor.generateSuccessor(self.index, action)
+    else:
+      return successor
+
+
   def calculate_closest_food(self, gameState):
     """
     Calculate the closest food distance
@@ -120,6 +151,27 @@ class QLearningCaptureAgent(CaptureAgent):
       for opponent in opponents:
         if not gameState.getAgentState(opponent).isPacman:
           ghosts.append(gameState.getAgentPosition(opponent))
+
+  def updateWeights(self, gameState, action):
+    """
+    Update the weights
+    """
+    reward = self.getReward(gameState, action)
+    difference = (reward + self.discount * self.getMaxQ(gameState, action)) - self.getQValue(gameState, action)
+    for feature in self.features:
+      self.weights[feature] += self.alpha * difference * self.features[feature]
+
+  def calculate_successor_score(self, successor):
+    """
+    Calculate the successor score
+    """
+    return self.getScore(successor)
+
+  def save_weights(self):
+    """
+    Save weights to file
+    """
+    json.dump(self.weights, open('weights.json', 'w'))
   
 
 
