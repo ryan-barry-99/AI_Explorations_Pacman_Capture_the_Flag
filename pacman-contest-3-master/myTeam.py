@@ -66,17 +66,18 @@ class QLearningCaptureAgent(CaptureAgent):
       return random.choice(actions)
     else:
       # Exploit: choose action with highest Q-value
-      return actions[self.getMaxQ(gameState)]
+      maxq, best_action = self.getMaxQ(gameState)
+      return best_action
   
   def getFeatures(self, gameState, action):
     self.features = util.Counter()
     successor = self.getSuccessor(gameState, action)
     # Calculate feature values based on the state-action pair
-    self.features['closest-food'] = self.calculate_closest_food(gameState)
-    self.features['bias'] = 1.0
-    self.features['#-of-ghosts-1-step-away'] = self.calculate_ghosts_1_step_away(gameState, action)
-    self.features['successorScore'] = self.calculate_successor_score(successor)
-    self.features['eats-food'] = self.calculate_eats_food(gameState, action)
+    self.features['closest-food'] = self.calculate_closest_food(gameState)/10
+    self.features['bias'] = 1.0/10
+    self.features['#-of-ghosts-1-step-away'] = self.calculate_ghosts_1_step_away(gameState, action)/10
+    self.features['successorScore'] = self.getScore(successor)/10
+    self.features['eats-food'] = self.calculate_eats_food(gameState, action)/10
     return self.features
   
   
@@ -85,9 +86,10 @@ class QLearningCaptureAgent(CaptureAgent):
     Calculate the Q values by multiplying training weights with features
     Features include closest food, bias, and ghoset distance
     """
-    return self.weights * self.getFeatures(gameState, action)
-  
-  
+    # return self.getFeatures(gameState, action) * self.weights
+    return sum(self.getFeatures(gameState, action)[f] * self.weights[f] for f in self.getFeatures(gameState, action))  
+ 
+ 
   def update(self, gameState, action, nextState, reward):
     """
     Update Q-values after taking action and observing result
@@ -95,9 +97,9 @@ class QLearningCaptureAgent(CaptureAgent):
     self.getFeatures(gameState, action)
     self.qValues[(gameState, action)] = self.qValues[(gameState, action)] + self.alpha * (reward + self.discount * self.getMaxQ(nextState) - self.qValues[(gameState, action)])
     # self.qValues[(gameState, action)] = (1 - self.alpha) * self.getQValue(gameState, action) + self.alpha * (reward + self.discount * max(self.qValues[nextState]))
+    save_weights()
 
-
-  def getMaxQ(self, gameState, action):
+  def getMaxQ(self, gameState):
     """
     Get maximum Q-value for current state
     """
@@ -106,16 +108,37 @@ class QLearningCaptureAgent(CaptureAgent):
       return None
     else:
       qvals = []
+      maxq = float('-inf')
+      best_action = None
       for action in legalActions:
-        self.updateWeights
-        qvals.append(self.getQValue(gameState, action))
-    return max([self.getQValue(gameState, a) for a in gameState.getLegalActions(self.index)])
+        qval = self.getQValue(gameState, action)
+        qvals.append(qval)
+        if qval > maxq:
+          maxq = qval
+          best_action = action
+      # self.updateWeights(gameState, best_action)
+        
+    return maxq, best_action
   
   def getReward(self, gameState, action):
-    """
-    Get reward for the action at a given state
-    """
-    return self.getScore(self.getSuccessor(gameState, action)) - self.getScore(gameState)
+      """
+      Get reward for the action at a given state
+      """
+      successor = self.getSuccessor(gameState, action)
+      currentPosition = gameState.getAgentPosition(self.index)
+      nextPosition = successor.getAgentPosition(self.index)
+
+      reward = 0
+
+      # Negative reward for being within a maze distance of 10 from the starting position
+      if self.getMazeDistance(currentPosition, self.startPosition) <= 10:
+          reward -= 999
+
+      # Positive reward for eating food
+      if self.getFood(gameState)[int(nextPosition[0])][int(nextPosition[1])]:
+          reward += 1
+
+      return reward
 
   def getSuccessor(self, gameState, action):
     """
@@ -137,7 +160,7 @@ class QLearningCaptureAgent(CaptureAgent):
     """
     foodList = self.getFood(gameState).asList()
     if foodList:
-      return min([self.getMazeDistance(gameState.getPacmanPosition(), food) for food in foodList])
+      return min([self.getMazeDistance(gameState.getAgentPosition(self.index), food) for food in foodList])
     else:
       return None
 
@@ -151,21 +174,33 @@ class QLearningCaptureAgent(CaptureAgent):
       for opponent in opponents:
         if not gameState.getAgentState(opponent).isPacman:
           ghosts.append(gameState.getAgentPosition(opponent))
+          
+    x, y = gameState.getAgentPosition(self.index)
+    dx, dy = game.Actions.directionToVector(action)
+    self.ix, self.iy = int(x + dx), int(y + dy)
+    
+    self.numGhosts = sum([(self.ix, self.iy) == ghost for ghost in ghosts])
+    
+    return self.numGhosts
+    
+  def calculate_eats_food(self, gameState, action):
+    """
+    Calculate if the action eats food
+    """
+    x, y = gameState.getAgentPosition(self.index)
+    dx, dy = game.Actions.directionToVector(action)
+    self.ix, self.iy = int(x + dx), int(y + dy)
+    return self.getFood(gameState)[self.ix][self.iy]
 
   def updateWeights(self, gameState, action):
     """
     Update the weights
     """
     reward = self.getReward(gameState, action)
-    difference = (reward + self.discount * self.getMaxQ(gameState, action)) - self.getQValue(gameState, action)
+    difference = (reward + self.discount * self.getMaxQ(gameState))[0] - self.getQValue(gameState, action)
     for feature in self.features:
       self.weights[feature] += self.alpha * difference * self.features[feature]
-
-  def calculate_successor_score(self, successor):
-    """
-    Calculate the successor score
-    """
-    return self.getScore(successor)
+    # save_weights()
 
   def save_weights(self):
     """
