@@ -22,7 +22,7 @@ import game
 #################
 
 def createTeam(firstIndex, secondIndex, isRed,
-               first = 'DummyAgent', second = 'DummyAgent'):
+               first = 'QLearningCaptureAgent', second = 'QLearningCaptureAgent'):
   """
   This function should return a list of two agents that will form the
   team, initialized using firstIndex and secondIndex as their agent
@@ -44,6 +44,37 @@ def createTeam(firstIndex, secondIndex, isRed,
 ##########
 # Agents #
 ##########
+
+class QLearningCaptureAgent(CaptureAgent): 
+  def __init__(self, index, epsilon=0.1, alpha=0.5, discount=0.9):
+    CaptureAgent.__init__(self, index)
+    # Initialize variables
+    self.epsilon = epsilon  # Exploration rate
+    self.alpha = alpha      # Learning rate
+    self.discount = discount# Discount factor
+    # Initialize Q-values dictionary
+    self.qValues = util.Counter()
+  
+  def chooseAction(self, gameState):
+    # Get legal actions
+    actions = gameState.getLegalActions(self.index)
+    # Get Q-values for current state
+    qValues = [self.getQValue(gameState, a) for a in actions]
+    # Choose action using epsilon-greedy policy
+    if util.flipCoin(self.epsilon):
+      # Explore: choose random action
+      return random.choice(actions)
+    else:
+      # Exploit: choose action with highest Q-value
+      return actions[qValues.index(max(qValues))] 
+  
+  # Get Q-value for a state-action pair
+  def getQValue(self, state, action): 
+    return self.qValues[(state, action)]
+  
+  # Update Q-values after taking action and observing result
+  def update(self, state, action, nextState, reward):
+    self.qValues[(state, action)] = (1 - self.alpha) * self.getQValue(state, action) + self.alpha * (reward + self.discount * max(self.qValues[nextState]))
 
 class DummyAgent(CaptureAgent):
   """
