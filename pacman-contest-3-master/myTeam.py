@@ -54,6 +54,7 @@ class QLearningCaptureAgent(CaptureAgent):
     # Initialize variables
     self.total_reward = 0
     self.previous_position = None
+    self.maxHomeDistance = 0
     
   def registerInitialState(self, gameState):
     """
@@ -82,7 +83,8 @@ class QLearningCaptureAgent(CaptureAgent):
   
   
   def getQValue(self, gameState, action): 
-    return sum(self.getFeatures(gameState, action)[f] * self.weights[f] for f in self.getFeatures(gameState, action))
+    features = self.getFeatures(gameState, action)
+    return sum(features[f] * self.weights[f] for f in features)
 
 
   def update(self, gameState, action):
@@ -224,7 +226,9 @@ class QLearningOffensiveAgent(QLearningCaptureAgent):
             features['distance_to_capsule'] = 1.0 / minDistance
 
     return features
-  
+
+
+    
   def getReward(self, gameState):
     """
     Get the reward for the state 
@@ -237,11 +241,13 @@ class QLearningOffensiveAgent(QLearningCaptureAgent):
     capsules = self.getCapsules(gameState)
     dist = self.getMazeDistance(myPos, self.startPosition)
 
-    # Define the decay factor for the negative reward
-    decay_factor = 0.5  # Adjust this value as desired
-
-    # Calculate the negative reward based on the distance from the starting position
-    neg_distance_reward = -500 * (decay_factor ** dist)
+    if myPos == self.startPosition:
+       self.maxHomeDistance = 0
+    if dist > self.maxHomeDistance and dist < 20:
+        self.maxHomeDistance = dist*100
+        reward += dist
+    else:
+        reward -= 100
 
     # Reward for eating food
     if gameState.hasFood(myPos[0], myPos[1]):
@@ -267,7 +273,6 @@ class QLearningOffensiveAgent(QLearningCaptureAgent):
         if len(capsules) > 0:
           reward += 10 # Additional reward for going after capsule when ghost is close
 
-    reward += neg_distance_reward
 
     self.params["total_reward"][-1] += reward
     self.save_weights()
@@ -410,11 +415,13 @@ class QLearningDefensiveAgent(QLearningCaptureAgent):
     myPos = gameState.getAgentPosition(self.index)
     dist = self.getMazeDistance(myPos, self.startPosition)
 
-    # Define the decay factor for the negative reward
-    decay_factor = 0.5  # Adjust this value as desired
-
-    # Calculate the negative reward based on the distance from the starting position
-    neg_distance_reward = -500 * (decay_factor ** dist)
+    if myPos == self.startPosition:
+       self.maxHomeDistance = 0
+    if dist > self.maxHomeDistance and dist < 20:
+        self.maxHomeDistance = dist*100
+        reward += dist
+    else:
+        reward -= 100
 
 
     if dist <= 25:
@@ -436,8 +443,6 @@ class QLearningDefensiveAgent(QLearningCaptureAgent):
     if dist <= 5:
         reward += 1.5
 
-    # Combine the positive and negative rewards
-    reward = reward + neg_distance_reward
 
     self.params["total_reward"][-1] += reward
     self.save_weights()

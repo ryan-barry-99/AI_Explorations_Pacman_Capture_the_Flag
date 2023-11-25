@@ -1,5 +1,6 @@
 {
     "weights": {
+        "distance_to_start": 0.0,
         "successor_score": 0.0,
         "num_ghosts_one_step_away": 0.0,
         "distance_from_closest_ghost": 0.0,
@@ -11,9 +12,14 @@
         "distance_to_capsule": 0.0,
         "bias": 0.0
     },
+    "base": {
+        "epsilon": 1.0,
+        "alpha": 0.1,
+        "discount": 0.9
+    },
     "num_episodes": 0,
-    "epsilon": [0.5],
+    "epsilon": [1.0],
     "alpha": [0.1],
-    "discount": [0.5],
+    "discount": [0.9],
     "total_reward": []
 }

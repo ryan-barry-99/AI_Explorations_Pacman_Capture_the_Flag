@@ -1099,7 +1099,7 @@ def update_parameters(param_json):
     alpha = params["alpha"][-1]
     discount = params["discount"][-1]
 
-    reset_chance = 0.05  # Chance to reset parameters to initial values
+    reset_chance = 0.025  # Chance to reset parameters to initial values
     
     if len(params["total_reward"]) < 2 or random.random() < reset_chance:
         # Use initial values if there's not enough history
@@ -1112,21 +1112,21 @@ def update_parameters(param_json):
 
         # Update epsilon based on total reward
         if total_reward > prev_reward:
-            epsilon *= 0.9  # Decrease epsilon if total reward is high
+            epsilon *= 0.99  # Decrease epsilon if total reward is high
         elif total_reward < prev_reward:
-            epsilon *= 1.1  # Increase epsilon if total reward is low
+            epsilon *= 1.01  # Increase epsilon if total reward is low
 
         # Update alpha based on total reward
         if total_reward > prev_reward:
-            alpha *= 0.9  # Decrease alpha if total reward is high
+            alpha *= 0.99  # Decrease alpha if total reward is high
         elif total_reward < prev_reward:
-            alpha *= 1.1  # Increase alpha if total reward is low
+            alpha *= 1.01  # Increase alpha if total reward is low
 
         # Update discount based on total reward
         if total_reward > prev_reward:
-            discount *= 0.9  # Decrease discount if total reward is high
+            discount *= 0.99  # Decrease discount if total reward is high
         elif total_reward < prev_reward:
-            discount *= 1.1  # Increase discount if total reward is low
+            discount *= 1.01  # Increase discount if total reward is low
 
         # Clip values to ensure they remain within valid ranges
         epsilon = max(0.0, min(1.0, epsilon))
@@ -1141,6 +1141,8 @@ def update_parameters(param_json):
     # Save the updated parameters back to the JSON file
     with open(param_json, 'w') as file:
         json.dump(params, file, indent=4)
+
+        
 if __name__ == '__main__':
   """
   The main function called when pacman.py is run
