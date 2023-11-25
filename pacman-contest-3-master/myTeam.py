@@ -53,9 +53,7 @@ class QLearningCaptureAgent(CaptureAgent):
     self.index = index
     # Initialize variables
     self.total_reward = 0
-    self.epsilon = 0.7  # Exploration rate
-    self.alpha = 0.2      # Learning rate
-    self.discount = 0.8 # Discount factor
+    self.previous_position = None
     
   def registerInitialState(self, gameState):
     """
@@ -89,8 +87,12 @@ class QLearningCaptureAgent(CaptureAgent):
 
   def update(self, gameState, action):
     successor = gameState.generateSuccessor(self.index, action)
+    current_position = gameState.getAgentPosition(self.index)
     reward = self.getReward(gameState)
+    if current_position == self.previous_position:
+       reward -= 0.1
     self.qValues[(gameState, action)] = (1 - self.alpha) * self.getQValue(gameState, action) + self.alpha * (reward + self.discount * self.getMaxQ(successor)[0])
+    self.previous_position = current_position
 
 
   def getMaxQ(self, gameState):
@@ -235,11 +237,11 @@ class QLearningOffensiveAgent(QLearningCaptureAgent):
 
     # Reward for eating food
     if gameState.hasFood(myPos[0], myPos[1]):
-        reward += 10
+        reward += 50
         
     # Reward for eating capsule
     if myPos in capsules:
-        reward += 50
+        reward += 100
         
     # Reward for getting closer to food 
     myDist = [self.getMazeDistance(myPos, food) for food in foodList]
@@ -396,20 +398,21 @@ class QLearningDefensiveAgent(QLearningCaptureAgent):
         reward -= (25 - dist) / 25
     else:
       for food in self.getFoodYouAreDefending(gameState).asList():
-          reward += 1
+          reward += 5
     
     # Penalize if invaders are in our side
     for invader in self.getInvaders(gameState): 
-        reward -= 2
+        reward -= 5
 
     # Big reward for catching invaders 
     if self.gotCaptured(gameState):
-        reward += 10
+        reward += 100
 
     # Reward for staying closer to our side
     dist = self.getDistanceToHome(gameState) 
     if dist <= 5:
-        reward += 0.5
+        reward += 1.5
+
     self.params["total_reward"][-1] += reward
     self.save_weights()
     return reward
