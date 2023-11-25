@@ -51,6 +51,11 @@ class QLearningCaptureAgent(CaptureAgent):
   def __init__(self, index):
     CaptureAgent.__init__(self, index)
     self.index = index
+    # Initialize variables
+    self.total_reward = 0
+    self.epsilon = 0.7  # Exploration rate
+    self.alpha = 0.2      # Learning rate
+    self.discount = 0.8 # Discount factor
     
   def registerInitialState(self, gameState):
     """
@@ -58,10 +63,6 @@ class QLearningCaptureAgent(CaptureAgent):
     """
     # Call the parent class's registerInitialState() method
     super().registerInitialState(gameState)
-    # Initialize variables
-    self.epsilon = 0.7  # Exploration rate
-    self.alpha = 0.2      # Learning rate
-    self.discount = 0.8 # Discount factor
     # Initialize Q-values dictionary
     self.qValues = util.Counter()
     self.startPosition = gameState.getAgentPosition(self.index)
@@ -130,9 +131,9 @@ class QLearningCaptureAgent(CaptureAgent):
     Update the weights
     """
     nextState = self.getSuccessor(gameState, action)
-    reward = self.getReward(gameState)
+    self.reward = self.getReward(gameState)
     # correction = (reward + self.discountRate*self.getValue(nextState)) - self.getQValue(gameState, action)
-    difference = (reward + self.discount * self.getMaxQ(nextState)[0]) - self.getQValue(gameState, action)
+    difference = (self.reward + self.discount * self.getMaxQ(nextState)[0]) - self.getQValue(gameState, action)
     features = self.getFeatures(gameState, action)
     for feature in features:
       self.weights[feature] += self.alpha * difference * features[feature]
@@ -143,7 +144,13 @@ class QLearningCaptureAgent(CaptureAgent):
 class QLearningOffensiveAgent(QLearningCaptureAgent):
   def __init__(self, index):
     super().__init__(index)
-    self.weights = json.load(open('offensiveWeights.json', 'r'))
+    self.params = json.load(open('offensiveParams.json', 'r'))
+    self.weights = self.params['weights']
+    self.params["total_reward"].append(0)
+    self.epsilon = self.params['epsilon'][-1]  # Exploration rate
+    self.alpha = self.params['alpha'][-1]      # Learning rate
+    self.discount = self.params['discount'][-1] # Discount factor
+    
   
   def getFeatures(self, gameState, action):
     features = util.Counter()
@@ -212,29 +219,27 @@ class QLearningOffensiveAgent(QLearningCaptureAgent):
         capsules = self.getCapsulesYouCanEat(gameState)  
         if len(capsules) > 0:
           reward += 10 # Additional reward for going after capsule when ghost is close
-        
+    self.params["total_reward"][-1] += reward
     return reward
   
   def save_weights(self):
     """
     Save weights to file
     """
-    json.dump(self.weights, open('offensiveWeights.json', 'w'))
+    json.dump(self.params, open('offensiveParams.json', 'w'))
   
 class QLearningDefensiveAgent(QLearningCaptureAgent):
   def __init__(self, index):
     super().__init__(index)
-    self.weights = json.load(open('defensiveWeights.json', 'r'))
+    self.params = json.load(open('defensiveParams.json', 'r'))
+    self.weights = self.params['weights']
+    self.params["total_reward"].append(0)
+    self.epsilon = self.params['epsilon'][-1]  # Exploration rate
+    self.alpha = self.params['alpha'][-1]      # Learning rate
+    self.discount = self.params['discount'][-1] # Discount factor
   
   def getFeatures(self, gameState, action):
     features = util.Counter()
-    weights = {
-        "distance_to_home": 0.9, 
-        "invader_captured": 0.8,
-        "food_protected": 0.7,  
-        "avoided_ghost": 0.6,  
-        "ambush_location": 0.5
-    }
 
     myState = gameState.getAgentState(self.index)
     myPos = myState.getPosition()
@@ -242,24 +247,24 @@ class QLearningDefensiveAgent(QLearningCaptureAgent):
     # Distance to home
     dist = self.getMazeDistance(myPos, self.startPosition) 
     if dist:
-      features['distance_to_home'] = weights['distance_to_home'] * (1.0/dist)
+      features['distance_to_home'] = self.weights['distance_to_home'] * (1.0/dist)
     
 
     # Invaders captured
     enemies = [gameState.getAgentState(i) for i in self.getOpponents(gameState)]
     invaders = [a for a in enemies if a.isPacman and a.getPosition() != None]
-    features['invader_captured'] = weights['invader_captured'] * len(invaders)
+    features['invader_captured'] = self.weights['invader_captured'] * len(invaders)
 
     # Food left
     foodLeft = len(self.getFood(gameState).asList())
-    features['food_protected'] = weights['food_protected'] * foodLeft
+    features['food_protected'] = self.weights['food_protected'] * foodLeft
 
     # Avoided ghosts
     if features['invader_captured'] > 0:
-        features['avoided_ghost'] = weights['avoided_ghost']
+        features['avoided_ghost'] = self.weights['avoided_ghost']
 
     # Ambush spots (would need more logic here)
-    features['ambush_location'] = weights['ambush_location']
+    features['ambush_location'] = self.weights['ambush_location']
 
     return features
   
@@ -327,14 +332,14 @@ class QLearningDefensiveAgent(QLearningCaptureAgent):
     dist = self.getDistanceToHome(gameState) 
     if dist <= 5:
         reward += 0.5
-
+    self.params["total_reward"][-1] += reward
     return reward
   
   def save_weights(self):
     """
     Save weights to file
     """
-    json.dump(self.weights, open('defensiveWeights.json', 'w'))
+    json.dump(self.params, open('defensiveParams.json', 'w'))
   
      
 
