@@ -245,9 +245,10 @@ class QLearningDefensiveAgent(QLearningCaptureAgent):
     myPos = myState.getPosition()
 
     # Distance to home
-    dist = self.getMazeDistance(myPos, self.startPosition) 
+    dist = self.getMazeDistance(myPos, self.startPosition)
+    maxDist = util.manhattanDistance((0,0), (gameState.data.layout.width - 1, gameState.data.layout.height - 1))
     if dist:
-      features['distance_to_home'] = self.weights['distance_to_home'] * (1.0/dist)
+        features['distance_to_home'] = self.weights['distance_to_home'] * (1.0 - dist / maxDist)
     
 
     # Invaders captured

@@ -8,7 +8,6 @@
     },
     "epsilon": [0.7],
     "alpha": [0.2],
-    "discount": [0.8],
-    "numTraining": [0],
+    "discount": [0.5],
     "total_reward": []
 }
