@@ -1,5 +1,9 @@
 {
     "weights": {
+        "successor_score": 0.0,
+        "num_ghosts_one_step_away": 0.0,
+        "distance_from_closest_ghost": 0.0,
+        "is_home": 0.0,
         "distance_to_food": 0.0,
         "food_eaten": 0.0,
         "avoided_ghost": 0.0,

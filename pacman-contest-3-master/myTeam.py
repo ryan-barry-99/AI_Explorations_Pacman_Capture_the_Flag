@@ -159,9 +159,39 @@ class QLearningOffensiveAgent(QLearningCaptureAgent):
   
   def getFeatures(self, gameState, action):
     features = util.Counter()
+    successorGameState = self.getSuccessor(gameState, action)
+    myState = gameState.getAgentState(self.index)
+    myPos = myState.getPosition()
+
+    # Weight Bias
     features["bias"] = 1.0
+
+     # Successor score based on food availability
+    if action == Directions.STOP:
+        features['successor_score'] = self.getScore(successorGameState)
+    else:
+        foodList = self.getFood(successorGameState).asList()
+        if len(foodList) > 0:
+            features['successor_score'] = self.getScore(successorGameState) + 1
+        else:
+            features['successor_score'] = self.getScore(successorGameState) - 1
+    
+    # Number of ghosts one step away
+    ghosts = [successorGameState.getAgentState(i) for i in self.getOpponents(successorGameState)]
+    ghosts_one_step_away = [g for g in ghosts if g.getPosition() is not None and self.getMazeDistance(myPos, g.getPosition()) == 1]
+    features['num_ghosts_one_step_away'] = len(ghosts_one_step_away)
+
+    # Distance from the closest ghost
+    if ghosts_one_step_away:
+        closest_ghost_distance = min([self.getMazeDistance(myPos, g.getPosition()) for g in ghosts_one_step_away])
+        features['distance_from_closest_ghost'] = closest_ghost_distance
+
+    # Whether the agent is home
+    features['is_home'] = 1 if myPos == self.startPosition else 0
+
+
+
     # Distance to closest food
-    myPos = gameState.getAgentState(self.index).getPosition()
     foodList = self.getFood(gameState).asList()  
     if foodList:
         minDistance = min([self.getMazeDistance(myPos, food) for food in foodList])
