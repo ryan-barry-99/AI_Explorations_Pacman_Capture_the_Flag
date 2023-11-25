@@ -182,7 +182,11 @@ class QLearningOffensiveAgent(QLearningCaptureAgent):
         minDistance = min([self.getMazeDistance(myPos, c) for c in capsules])
         if minDistance > 1:
             features['distance_to_capsule'] = 1.0 / minDistance
-
+    for feature in features:
+      if features[feature] > 100:
+        features[feature] = 100
+      elif features[feature] < -100:
+        features[feature] = -100
     return features
   
   def getReward(self, gameState):
@@ -220,6 +224,7 @@ class QLearningOffensiveAgent(QLearningCaptureAgent):
         if len(capsules) > 0:
           reward += 10 # Additional reward for going after capsule when ghost is close
     self.params["total_reward"][-1] += reward
+    self.save_weights()
     return reward
   
   def save_weights(self):
@@ -267,6 +272,11 @@ class QLearningDefensiveAgent(QLearningCaptureAgent):
     # Ambush spots (would need more logic here)
     features['ambush_location'] = self.weights['ambush_location']
 
+    for feature in features:
+      if features[feature] > 100:
+        features[feature] = 100
+      elif features[feature] < -100:
+        features[feature] = -100
     return features
   
   def getInvaders(self, gameState):
@@ -334,6 +344,7 @@ class QLearningDefensiveAgent(QLearningCaptureAgent):
     if dist <= 5:
         reward += 0.5
     self.params["total_reward"][-1] += reward
+    self.save_weights()
     return reward
   
   def save_weights(self):

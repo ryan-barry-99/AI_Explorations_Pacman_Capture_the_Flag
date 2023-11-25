@@ -1,13 +1,1 @@
-{
-    "weights": {
-        "distance_to_food": 0.9,
-        "food_eaten": 0.8,
-        "avoided_ghost": 0.7,
-        "carrying_food": 0.6,
-        "distance_to_capsule": 0.5   
-    },
-    "epsilon": [0.7],
-    "alpha": [0.2],
-    "discount": [0.5],
-    "total_reward": []
-}
+{"weights": {"distance_to_food": 2.1104258002707272, "food_eaten": 0.8, "avoided_ghost": 0.7, "carrying_food": 0.6, "distance_to_capsule": 1.8466576696678227}, "epsilon": [0.7, 0.63], "alpha": [0.2, 0.18000000000000002], "discount": [0.8, 0.7200000000000001], "total_reward": [6.484504127951874, 208.7220591727507, 6.05088813509867, 5.617772277913489, 1.3008278200190906]}
