@@ -326,10 +326,14 @@ class QLearningDefensiveAgent(QLearningCaptureAgent):
       
   def getReward(self, gameState):
     reward = 0
-
+    
     # Reward for each food dot left in our side
-    for food in self.getFoodYouAreDefending(gameState).asList():
-        reward += 1
+    myPos = gameState.getAgentPosition(self.index)
+    if self.getMazeDistance(myPos, self.startPosition) >= 15:
+      reward -= 0.01
+    else:
+      for food in self.getFoodYouAreDefending(gameState).asList():
+          reward += 1
     
     # Penalize if invaders are in our side
     for invader in self.getInvaders(gameState): 
