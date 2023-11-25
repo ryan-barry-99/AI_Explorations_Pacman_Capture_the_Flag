@@ -1,19 +1,25 @@
 {
     "weights": {
-        "distance_to_home": 0.9, 
-        "invader_captured": 0.8,
-        "food_protected": 0.7, 
-        "avoided_ghost": 0.6, 
-        "ambush_location": 0.5
+        "num_invaders": 0.0,
+        "distance_from_middle": 0.0,
+        "distance_from_closest_invader": 0.0,
+        "scared_distance": 0.0,
+        "distance_to_home": 0.0, 
+        "invader_captured": 0.0,
+        "food_protected": 0.0, 
+        "avoided_ghost": 0.0, 
+        "ambush_location": 0.0,
+        "bias": 0.0
     },
+    "num_episodes": 0,
     "epsilon": [
-        0.7
+        0.5
     ],
     "alpha": [
-        0.2
+        0.1
     ],
     "discount": [
-        0.8
+        0.5
     ],
     "total_reward": [
     ]

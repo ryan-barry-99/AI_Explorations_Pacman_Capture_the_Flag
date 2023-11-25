@@ -1085,7 +1085,62 @@ def runGames( layouts, agents, display, length, numGames, record, numTraining, r
 def save_score(game):
     with open('score', 'w') as f:
         print(game.state.data.score, file=f)
+import json
+def update_parameters(param_json):
+    """
+    Update epsilon, alpha, and discount based on the total reward per episode.
+    """
+    # Load parameters from the JSON file
+    with open(param_json, 'r') as file:
+        params = json.load(file)
 
+    # Extract current values
+    epsilon = params["epsilon"][-1]
+    alpha = params["alpha"][-1]
+    discount = params["discount"][-1]
+
+    reset_chance = 0.05  # Chance to reset parameters to initial values
+    
+    if len(params["total_reward"]) < 2 or random.random() < 0.05:
+        # Use initial values if there's not enough history
+        epsilon = params["base"]["epsilon"]
+        alpha = params["base"]["alpha"]
+        discount = params["base"]["discount"]
+    else:
+        total_reward = params["total_reward"][-1]
+        prev_reward = params["total_reward"][-2]
+
+        # Update epsilon based on total reward
+        if total_reward > prev_reward:
+            epsilon *= 0.95  # Decrease epsilon if total reward is high
+        elif total_reward < prev_reward:
+            epsilon *= 1.1  # Increase epsilon if total reward is low
+
+        # Update alpha based on total reward
+        if total_reward > prev_reward:
+            alpha *= 0.95  # Decrease alpha if total reward is high
+        elif total_reward < prev_reward:
+            alpha *= 1.1  # Increase alpha if total reward is low
+
+        # Update discount based on total reward
+        if total_reward > prev_reward:
+            discount *= 0.95  # Decrease discount if total reward is high
+        elif total_reward < prev_reward:
+            discount *= 1.1  # Increase discount if total reward is low
+
+        # Clip values to ensure they remain within valid ranges
+        epsilon = max(0.0, min(1.0, epsilon))
+        alpha = max(0.0, min(1.0, alpha))
+        discount = max(0.0, min(1.0, discount))
+
+    # Update the parameters dictionary
+    params["epsilon"].append(epsilon)
+    params["alpha"].append(alpha)
+    params["discount"].append(discount)
+
+    # Save the updated parameters back to the JSON file
+    with open(param_json, 'w') as file:
+        json.dump(params, file, indent=4)
 if __name__ == '__main__':
   """
   The main function called when pacman.py is run
@@ -1103,5 +1158,9 @@ if __name__ == '__main__':
 
   save_score(games[0])
   print('\nTotal Time Game: %s'% round(time.time() - start_time, 0))
+  
+  update_parameters("offensiveParams.json")
+  update_parameters("defensiveParams.json")
+  print("Updated parameters")
   # import profile
   # profile.run('runGames( **options )', 'profile')

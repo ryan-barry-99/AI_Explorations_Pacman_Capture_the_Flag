@@ -151,6 +151,7 @@ class QLearningOffensiveAgent(QLearningCaptureAgent):
     self.params = json.load(open('offensiveParams.json', 'r'))
     self.weights = self.params['weights']
     self.params["total_reward"].append(0)
+    self.params["num_episodes"] += 1
     self.epsilon = self.params['epsilon'][-1]  # Exploration rate
     self.alpha = self.params['alpha'][-1]      # Learning rate
     self.discount = self.params['discount'][-1] # Discount factor
@@ -158,7 +159,7 @@ class QLearningOffensiveAgent(QLearningCaptureAgent):
   
   def getFeatures(self, gameState, action):
     features = util.Counter()
-
+    features["bias"] = 1.0
     # Distance to closest food
     myPos = gameState.getAgentState(self.index).getPosition()
     foodList = self.getFood(gameState).asList()  
@@ -199,7 +200,9 @@ class QLearningOffensiveAgent(QLearningCaptureAgent):
     myPos = gameState.getAgentPosition(self.index)
     foodList = self.getFood(gameState).asList()
     capsules = self.getCapsules(gameState)
-    
+    if self.getMazeDistance(myPos, self.startPosition) < 30:
+      reward -= 1 - self.getMazeDistance(myPos, self.startPosition)/30
+
     # Reward for eating food
     if gameState.hasFood(myPos[0], myPos[1]):
         reward += 10
@@ -239,15 +242,39 @@ class QLearningDefensiveAgent(QLearningCaptureAgent):
     self.params = json.load(open('defensiveParams.json', 'r'))
     self.weights = self.params['weights']
     self.params["total_reward"].append(0)
+    self.params["num_episodes"] += 1
     self.epsilon = self.params['epsilon'][-1]  # Exploration rate
     self.alpha = self.params['alpha'][-1]      # Learning rate
     self.discount = self.params['discount'][-1] # Discount factor
   
   def getFeatures(self, gameState, action):
     features = util.Counter()
-
     myState = gameState.getAgentState(self.index)
     myPos = myState.getPosition()
+
+    features["bias"] = 1.0
+
+    # Number of invaders
+    numInvaders = len(self.getInvaders(gameState))
+    features['num_invaders'] = numInvaders
+
+    # Distance from the middle
+    distanceFromMiddle = abs(myPos[0] - gameState.data.layout.width / 2)
+    features['distance_from_middle'] = distanceFromMiddle
+
+    # Distance from the closest invader
+    opponents = self.getOpponents(gameState)
+    invaders = [i for i in opponents if gameState.getAgentState(i).isPacman]
+    invader_pos = []
+    if invaders:
+        for invader_index in invaders:
+            invader_state = gameState.getAgentState(invader_index)
+            pos = invader_state.getPosition()
+            if pos is not None:
+                invader_pos.append(pos)
+        if invader_pos:
+            closestInvaderDistance = min([self.getMazeDistance(myPos, pos) for pos in invader_pos])
+            features['distance_from_closest_invader'] = closestInvaderDistance
 
     # Distance to home
     dist = self.getMazeDistance(myPos, self.startPosition)
@@ -255,10 +282,15 @@ class QLearningDefensiveAgent(QLearningCaptureAgent):
     if dist:
         features['distance_to_home'] = self.weights['distance_to_home'] * (1.0 - dist / maxDist)
     
+    # Scared distance (distance of the closest invader from scared agent)
+    scaredAgents = [a for a in self.getOpponents(gameState) if gameState.getAgentState(a).scaredTimer > 0]
+    if scaredAgents:
+        closestScaredInvaderDistance = min([self.getMazeDistance(myPos, gameState.getAgentPosition(agent)) for agent in scaredAgents])
+        features['scared_distance'] = closestScaredInvaderDistance
 
     # Invaders captured
     enemies = [gameState.getAgentState(i) for i in self.getOpponents(gameState)]
-    invaders = [a for a in enemies if a.isPacman and a.getPosition() != None]
+    invaders = [invader for invader in enemies if invader.isPacman and invader.getPosition() is not None]
     features['invader_captured'] = self.weights['invader_captured'] * len(invaders)
 
     # Food left
@@ -300,11 +332,11 @@ class QLearningDefensiveAgent(QLearningCaptureAgent):
         myPos = myState.getPosition()
 
         opponents = self.getOpponents(gameState)
-        invaders = [gameState.getAgentState(i) for i in opponents if gameState.getAgentState(i).isPacman]
-
-        for invader in invaders:
-            invaderPos = invader.getPosition()
-            if invaderPos is not None and self.getMazeDistance(myPos, invaderPos) <= 1:
+        invaders = [i for i in opponents if gameState.getAgentState(i).isPacman]
+        for invader_index in invaders:
+            invader_state = gameState.getAgentState(invader_index)
+            invader_pos = invader_state.getPosition()
+            if invader_pos is not None and self.getMazeDistance(myPos, invader_pos) <= 1:
                 return True
 
         return False
@@ -329,8 +361,9 @@ class QLearningDefensiveAgent(QLearningCaptureAgent):
     
     # Reward for each food dot left in our side
     myPos = gameState.getAgentPosition(self.index)
-    if self.getMazeDistance(myPos, self.startPosition) >= 15:
-      reward -= 0.01
+    dist = self.getMazeDistance(myPos, self.startPosition)
+    if dist <= 25:
+        reward -= (25 - dist) / 25
     else:
       for food in self.getFoodYouAreDefending(gameState).asList():
           reward += 1
