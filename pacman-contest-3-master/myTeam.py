@@ -72,7 +72,10 @@ class QLearningCaptureAgent(CaptureAgent):
     # Choose action using epsilon-greedy policy
     if util.flipCoin(self.epsilon):
       # Explore: choose random action
-      return random.choice(actions)
+      action = random.choice(actions)
+      self.update(gameState, action)
+      self.updateWeights(gameState, action)
+      return action
     else:
       # Exploit: choose action with highest Q-value
       maxq, best_action = self.getMaxQ(gameState)
@@ -95,6 +98,7 @@ class QLearningCaptureAgent(CaptureAgent):
        reward -= 0.1
     self.qValues[(gameState, action)] = (1 - self.alpha) * self.getQValue(gameState, action) + self.alpha * (reward + self.discount * self.getMaxQ(successor)[0])
     self.previous_position = current_position
+    self.updateWeights(gameState, action)
 
 
   def getMaxQ(self, gameState):
@@ -145,7 +149,6 @@ class QLearningCaptureAgent(CaptureAgent):
         self.weights[feature] = 100
       elif self.weights[feature] < -100:
         self.weights[feature] = -100
-    # print(self.weights)
     self.save_weights()
 
   
@@ -272,7 +275,6 @@ class QLearningOffensiveAgent(QLearningCaptureAgent):
         capsules = self.getCapsulesYouCanEat(gameState)  
         if len(capsules) > 0:
           reward += 10 # Additional reward for going after capsule when ghost is close
-
 
     self.params["total_reward"][-1] += reward
     self.save_weights()
@@ -443,7 +445,7 @@ class QLearningDefensiveAgent(QLearningCaptureAgent):
     if dist <= 5:
         reward += 1.5
 
-
+    
     self.params["total_reward"][-1] += reward
     self.save_weights()
     return reward
