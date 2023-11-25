@@ -137,6 +137,10 @@ class QLearningCaptureAgent(CaptureAgent):
     features = self.getFeatures(gameState, action)
     for feature in features:
       self.weights[feature] += self.alpha * difference * features[feature]
+      if self.weights[feature] > 100:
+        self.weights[feature] = 100
+      elif self.weights[feature] < -100:
+        self.weights[feature] = -100
     # print(self.weights)
     self.save_weights()
 
@@ -182,11 +186,7 @@ class QLearningOffensiveAgent(QLearningCaptureAgent):
         minDistance = min([self.getMazeDistance(myPos, c) for c in capsules])
         if minDistance > 1:
             features['distance_to_capsule'] = 1.0 / minDistance
-    for feature in features:
-      if features[feature] > 100:
-        features[feature] = 100
-      elif features[feature] < -100:
-        features[feature] = -100
+
     return features
   
   def getReward(self, gameState):
