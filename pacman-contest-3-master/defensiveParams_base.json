@@ -1,5 +1,6 @@
 {
     "weights": {
+        "distance_to_start": 0.0,
         "num_invaders": 0.0,
         "distance_from_middle": 0.0,
         "distance_from_closest_invader": 0.0,
