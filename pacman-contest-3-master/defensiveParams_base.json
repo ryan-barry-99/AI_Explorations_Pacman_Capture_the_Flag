@@ -13,7 +13,7 @@
         "bias": 0.0
     },
     "base": {
-        "epsilon": 1.0,
+        "epsilon": 0.6,
         "alpha": 0.1,
         "discount": 0.9
     },

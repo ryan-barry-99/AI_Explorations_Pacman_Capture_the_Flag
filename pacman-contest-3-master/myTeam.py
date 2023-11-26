@@ -55,6 +55,8 @@ class QLearningCaptureAgent(CaptureAgent):
     self.total_reward = 0
     self.previous_position = None
     self.maxHomeDistance = 0
+    self.defendingFood = 0
+    self.visited = set()
     
   def registerInitialState(self, gameState):
     """
@@ -145,10 +147,10 @@ class QLearningCaptureAgent(CaptureAgent):
     features = self.getFeatures(gameState, action)
     for feature in features:
       self.weights[feature] += self.alpha * difference * features[feature]
-      if self.weights[feature] > 100:
-        self.weights[feature] = 100
-      elif self.weights[feature] < -100:
-        self.weights[feature] = -100
+      if self.weights[feature] > 99999:
+        self.weights[feature] = 99999
+      elif self.weights[feature] < -99999:
+        self.weights[feature] = -99999
     self.save_weights()
 
   
@@ -211,12 +213,15 @@ class QLearningOffensiveAgent(QLearningCaptureAgent):
     features['food_eaten'] = self.getFood(gameState)[int(myPos[0])][int(myPos[1])]
 
     # Avoid ghosts
-    enemies = [gameState.getAgentState(i) for i in self.getOpponents(gameState)]
-    ghosts = [e for e in enemies if not e.isPacman and e.getPosition() != None]
-    if ghosts:
-        minDistance = min([self.getMazeDistance(myPos, g.getPosition()) for g in ghosts])
-        if minDistance > 1:
-            features['avoided_ghost'] = 1 * 0.7
+    if gameState.getAgentState(self.index).isPacman:
+      enemies = [gameState.getAgentState(i) for i in self.getOpponents(gameState)]
+      ghosts = [e for e in enemies if not e.isPacman and e.getPosition() != None]
+      if ghosts:
+          minDistance = min([self.getMazeDistance(myPos, g.getPosition()) for g in ghosts])
+          if minDistance > 1:
+              features['avoided_ghost'] = 1 * 0.7
+    else:
+       features['avoided_ghost'] = 0  
 
     # Carrying food
     features['carrying_food'] = gameState.getAgentState(self.index).numCarrying
@@ -244,13 +249,22 @@ class QLearningOffensiveAgent(QLearningCaptureAgent):
     capsules = self.getCapsules(gameState)
     dist = self.getMazeDistance(myPos, self.startPosition)
 
+    # In the getReward function
+    if myPos not in self.visited:
+        self.visited.add(myPos)
+        reward += 10  # Reward for visiting a new state
+
+
+    if gameState.getAgentState(self.index).isPacman:
+      reward += 1
+
     if myPos == self.startPosition:
        self.maxHomeDistance = 0
-    if dist > self.maxHomeDistance and dist < 20:
-        self.maxHomeDistance = dist*100
+    if dist > self.maxHomeDistance and dist < 35:
+        self.maxHomeDistance = dist
         reward += dist
     else:
-        reward -= 100
+        reward -= 1
 
     # Reward for eating food
     if gameState.hasFood(myPos[0], myPos[1]):
@@ -269,12 +283,18 @@ class QLearningOffensiveAgent(QLearningCaptureAgent):
     enemyGhosts = [a for a in enemies if a.isPacman == False and a.getPosition() != None]
     
     if len(enemyGhosts) > 0:
-      myPos = gameState.getAgentState(self.index).getPosition() 
-      closestGhostDist = min([self.getMazeDistance(myPos, g.getPosition()) for g in enemyGhosts])  
-      if closestGhostDist <= 5:
-        capsules = self.getCapsulesYouCanEat(gameState)  
-        if len(capsules) > 0:
-          reward += 10 # Additional reward for going after capsule when ghost is close
+        myPos = gameState.getAgentState(self.index).getPosition() 
+        closestGhostDist = min([self.getMazeDistance(myPos, g.getPosition()) for g in enemyGhosts])  
+        if closestGhostDist <= 5:
+            capsules = self.getCapsules(gameState)  
+            if len(capsules) > 0:
+                reward += 10 # Additional reward for going after capsule when ghost is close
+
+            # Check if the closest ghost is scared
+            closestGhost = min(enemyGhosts, key=lambda g: self.getMazeDistance(myPos, g.getPosition()))
+            if closestGhost.scaredTimer > 0:
+                reward += 50 # Reward for chasing a scared ghost
+
 
     self.params["total_reward"][-1] += reward
     self.save_weights()
@@ -359,10 +379,10 @@ class QLearningDefensiveAgent(QLearningCaptureAgent):
     features['ambush_location'] = self.weights['ambush_location']
 
     for feature in features:
-      if features[feature] > 100:
-        features[feature] = 100
-      elif features[feature] < -100:
-        features[feature] = -100
+      if features[feature] > 99999:
+        features[feature] = 99999
+      elif features[feature] < -99999:
+        features[feature] = -99999
     return features
   
   def getInvaders(self, gameState):
@@ -417,20 +437,31 @@ class QLearningDefensiveAgent(QLearningCaptureAgent):
     myPos = gameState.getAgentPosition(self.index)
     dist = self.getMazeDistance(myPos, self.startPosition)
 
+    
+    # In the getReward function
+    if myPos not in self.visited:
+        self.visited.add(myPos)
+        reward += 10  # Reward for visiting a new state
+        
     if myPos == self.startPosition:
        self.maxHomeDistance = 0
-    if dist > self.maxHomeDistance and dist < 20:
-        self.maxHomeDistance = dist*100
+       self.defendingFood = len(self.getFoodYouAreDefending(gameState).asList())
+    if dist > self.maxHomeDistance and dist < 35:
+        self.maxHomeDistance = dist
         reward += dist
     else:
-        reward -= 100
+        reward -= 1
 
-
+		
     if dist <= 25:
         reward -= (25 - dist) / 25
     else:
-      for food in self.getFoodYouAreDefending(gameState).asList():
-          reward += 5
+      if self.defendingFood < len(self.getFoodYouAreDefending(gameState).asList()):
+         reward -= 5
+         self.defendingFood = len(self.getFoodYouAreDefending(gameState).asList())
+      else:
+        for food in self.getFoodYouAreDefending(gameState).asList():
+            reward += 5
     
     # Penalize if invaders are in our side
     for invader in self.getInvaders(gameState): 
