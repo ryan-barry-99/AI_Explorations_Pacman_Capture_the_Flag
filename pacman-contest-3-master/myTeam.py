@@ -78,12 +78,16 @@ class QLearningCaptureAgent(CaptureAgent):
       self.update(gameState, action)
       self.updateWeights(gameState, action)
       return action
-    else:
-      # Exploit: choose action with highest Q-value
-      maxq, best_action = self.getMaxQ(gameState)
-      self.update(gameState, best_action)
-      self.updateWeights(gameState, best_action)
-      return best_action
+    # Exploit: choose action with highest Q-value
+    position = gameState.getAgentPosition(self.index)
+    bestValue = float("-inf")
+    bestAction = None
+    for action in actions:
+       qValue = self.qValues[(position, action)]
+       if qValue > bestValue:
+          bestAction = action
+          bestValue = qValue
+    return bestAction
   
   
   
@@ -98,7 +102,7 @@ class QLearningCaptureAgent(CaptureAgent):
     reward = self.getReward(gameState)
     if current_position == self.previous_position:
        reward -= 0.1
-    self.qValues[(gameState, action)] = (1 - self.alpha) * self.getQValue(gameState, action) + self.alpha * (reward + self.discount * self.getMaxQ(successor)[0])
+    self.qValues[(current_position, action)] = (1 - self.alpha) * self.getQValue(gameState, action) + self.alpha * (reward + self.discount * self.getMaxQ(successor)[0])
     self.previous_position = current_position
     self.updateWeights(gameState, action)
 
