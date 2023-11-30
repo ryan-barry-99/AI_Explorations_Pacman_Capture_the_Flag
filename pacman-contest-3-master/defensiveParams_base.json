@@ -1,5 +1,12 @@
 {
     "weights": {
+        "onDefense": 0.0,
+        "stop": 0.0,
+        "enemy1_num_carried": 0,
+        "enemy2_num_carried": 0,
+        "teammate_food_carried": 0.0,
+        "reverse": 0.0,
+        "invaderDistance": 0.0,
         "distance_to_start": 0.0,
         "num_invaders": 0.0,
         "distance_from_middle": 0.0,
@@ -8,8 +15,25 @@
         "distance_to_home": 0.0, 
         "invader_captured": 0.0,
         "food_protected": 0.0, 
-        "avoided_ghost": 0.0, 
-        "ambush_location": 0.0,
+        "ambush_location_x": 0.0,
+        "ambush_location_y": 0.0,
+        "teammate_location_x": 0.0,
+        "teammate_location_y": 0.0,
+        "opponent1_location_x": 0.0,
+        "opponent1_location_y": 0.0,
+        "opponent2_location_x": 0.0,
+        "opponent2_location_y": 0.0,
+        "successor_score": 0.0,
+        "num_ghosts_one_step_away": 0.0,
+        "distance_from_closest_ghost": 0.0,
+        "is_home": 0.0,
+        "distanceToFood": 0.0,
+        "food_eaten": 0.0,
+        "avoided_ghost": 0.0,
+        "carrying_food": 0.0,
+        "distance_to_capsule": 0.0,
+        "game_score": 0.0,
+        "teammate_food_carried": 0.0,
         "bias": 0.0
     },
     "base": {
@@ -17,9 +41,15 @@
         "alpha": 0.1,
         "discount": 0.9
     },
+    "current": {
+        "epsilon": 0.6,
+        "alpha": 0.1,
+        "discount": 0.9
+    },
     "num_episodes": 0,
+    "latest_reward": 0.0,
     "epsilon": [
-        1.0
+        0.6
     ],
     "alpha": [
         0.1
