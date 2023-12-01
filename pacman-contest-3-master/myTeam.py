@@ -480,6 +480,7 @@ class QLearningOffensiveAgent(QLearningCaptureAgent):
     """
     reward = 0
     
+    
     # Get useful info 
     myPos = gameState.getAgentPosition(self.index)
     foodList = self.getFood(gameState).asList()
@@ -488,6 +489,10 @@ class QLearningOffensiveAgent(QLearningCaptureAgent):
     closestInvaderDist = 9999
     nextPos = nextState.getAgentState(self.index).getPosition()
     nextdist = self.getMazeDistance(nextPos, self.startPosition)
+
+    enemies = [nextState.getAgentState(i) for i in self.getOpponents(nextState)]
+    reward -= enemies[0].numCarrying
+    reward -= enemies[1].numCarrying
 
     minFoodDistance = 9999
     for food in foodList:
@@ -721,6 +726,11 @@ class QLearningDefensiveAgent(QLearningCaptureAgent):
     nextPos = nextState.getAgentState(self.index).getPosition()
     nextdist = self.getMazeDistance(nextPos, self.startPosition)
 
+    
+    enemies = [nextState.getAgentState(i) for i in self.getOpponents(nextState)]
+    reward -= enemies[0].numCarrying
+    reward -= enemies[1].numCarrying
+    
     if self.lastPos == nextPos:
       reward -= 3
     self.lastPos = myPos

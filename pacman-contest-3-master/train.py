@@ -48,6 +48,10 @@ with tqdm(initial=num_episodes, total=total_episodes, desc=f"Training for {total
             defensive_params = json.load(open("defensiveParams.json", 'r'))
             clear_output()
             red = not red
+            if offensive_params["num_episodes"] % 100 == 0:
+                subprocess.run("git add *")
+                subprocess.run(f"git commit -m Trained for {offensive_params['num_episodes']} episodes")
+                subprocess.run("git push")
         else:
             print(f"Error in episode {episode + 1}. Exiting.")
             break
