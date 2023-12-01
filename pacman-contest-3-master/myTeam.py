@@ -76,9 +76,9 @@ class QLearningCaptureAgent(CaptureAgent):
     random.seed(time.monotonic())
     self.foodDistanceScaler = 10
     self.defensiveFoodDistanceScaler = 1
-    self.homeDistanceScaler = 10.01
-    self.offensiveInvaderScaler = 11
-    self.defensiveInvaderScaler = 10
+    self.homeDistanceScaler = 10.00001
+    self.offensiveInvaderScaler = 15
+    self.defensiveInvaderScaler = 15
     self.capsuleDistanceScaler = 11
     self.teammateScaler = 1
     self.lastPos = None

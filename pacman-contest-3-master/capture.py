@@ -1099,7 +1099,7 @@ def update_parameters(param_json):
     alpha = params["alpha"][-1]
     discount = params["discount"][-1]
 
-    reset_chance = 0.005  # Chance to reset parameters to initial values
+    reset_chance = 0.05  # Chance to reset parameters to initial values
     
     if len(params["total_reward"]) < 2 or random.random() < reset_chance:
         # Use initial values if there's not enough history
@@ -1112,11 +1112,11 @@ def update_parameters(param_json):
 
         # Update epsilon based on total reward
         if total_reward > prev_reward :
-            epsilon *= 0.99  # Decrease epsilon if total reward is high
+            epsilon *= 0.9  # Decrease epsilon if total reward is high
             alpha *= 0.999  # Decrease alpha if total reward is high
             discount *= 0.999  # Decrease discount if total reward is high
-        elif total_reward < prev_reward:
-            epsilon *= 1.01  # Increase epsilon if total reward is low
+        elif total_reward <= prev_reward:
+            epsilon *= 1.001  # Increase epsilon if total reward is low
             alpha *= 1.001  # Increase alpha if total reward is low
             discount *= 1.001  # Increase discount if total reward is low
 
@@ -1124,16 +1124,26 @@ def update_parameters(param_json):
         # Clip values to ensure they remain within valid ranges
         epsilon = max(0.0, min(1.0, epsilon))
         alpha = max(0.1, min(0.5, alpha))
-        discount = max(0.999, min(1.0, discount))
+        discount = max(0.75, min(0.99, discount))
 
     # Update the parameters dictionary
     params["epsilon"].append(epsilon)
+    params["current"]["epsilon"] = epsilon
     params["alpha"].append(alpha)
+    params["current"]["alpha"] = alpha
     params["discount"].append(discount)
+    params["current"]["discount"] = discount
+
 
     # Save the updated parameters back to the JSON file
     with open(param_json, 'w') as file:
         json.dump(params, file, indent=4)
+    if len(params["total_reward"]) >= 1:
+      if params["latest_reward"] == max(params["total_reward"]):
+          if "offensive" in param_json:
+            json.dump(params["weights"], open("offensiveWeights.json", "w"), indent=4)
+          elif "defensive" in param_json:
+            json.dump(params["weights"], open("defensiveWeights.json", "w"), indent=4)
 
         
 if __name__ == '__main__':

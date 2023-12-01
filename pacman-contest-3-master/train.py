@@ -16,15 +16,21 @@ def show_output(output):
 
 
 red = True
+agents = ["myTeamApproxQLearningAgent", "myTeam2", "myTeam", "baselineTeam"]
 # Function to run the capture.py command for a given episode
 # Function to run the capture.py command for a given episode
 def run_episode(episode):
     global red
-    # if red:
-    #     command = f"python capture.py -r baselineteam -b myteam --delay-step 0 -q"
-    # else:
-    #     command = f"python capture.py -r myteam -b baselineteam --delay-step 0 -q"
-    command = f"python capture.py -r myteam -b myteam --delay-step 0 -q"
+    i = 0
+    if red:
+        command = f"python capture.py -r {agents[i]} -b myteam --delay-step 0 -q"
+    else:
+        command = f"python capture.py -r myteam -b {agents[i]} --delay-step 0 -q"
+    if not red:
+        i += 1
+        if i == 4:
+            i = 0
+    # command = f"python capture.py -r myteam -b myteam --delay-step 0 -q"
     result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
     if result.returncode != 0:
         error_message = result.stderr.decode("utf-8")
