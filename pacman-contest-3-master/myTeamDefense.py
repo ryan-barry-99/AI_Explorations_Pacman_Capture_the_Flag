@@ -76,9 +76,9 @@ class QLearningCaptureAgent(CaptureAgent):
     random.seed(time.monotonic())
     self.foodDistanceScaler = 10
     self.defensiveFoodDistanceScaler = 1
-    self.homeDistanceScaler = 10.00001
-    self.offensiveInvaderScaler = 100
-    self.defensiveInvaderScaler = 100
+    self.homeDistanceScaler = 10.000000000000000001
+    self.offensiveInvaderScaler = 99999999
+    self.defensiveInvaderScaler = 99999999
     self.capsuleDistanceScaler = 11
     self.teammateScaler = 1
     self.lastPos = None
@@ -290,10 +290,12 @@ class QLearningCaptureAgent(CaptureAgent):
     invaders = [a for a in enemies if a.isPacman and a.getPosition() != None]
     features["num_invaders"] = len(invaders)
     if len(invaders) > 0:
+      self.foodDistanceScaler = 0
       dists = [self.getMazeDistance(myPos, a.getPosition()) for a in invaders]
       features["invaderDistance"] = min(dists)
       features["onDefense"] = 1
     else:
+      self.foodDistanceScaler = 10
       features["onDefense"] = 0
 
     if len(scaredAgents) > 0:
@@ -563,8 +565,8 @@ class QLearningOffensiveAgent(QLearningCaptureAgent):
         reward -= self.leaveHomeScaler / max(20 - dist, 0.00001)
 
       
-    invaders = [gameState.getAgentState(i) for i in self.getOpponents(gameState) if gameState.getAgentState(i).isPacman and gameState.getAgentState(i).getPosition() is not None]
-    invaderPositions = [invader.getPosition() for invader in invaders if invader.getPosition() is not None]
+    invaders = [nextState.getAgentState(i) for i in self.getOpponents(gameState) if nextState.getAgentState(i).isPacman and nextState.getAgentState(i).getPosition() is not None]
+    invaderPositions = [invader.getPosition() for invader in invaders if (self.color == RED and invader.getPosition()[0] < width - 1 or self.colot == BLUE and invader.getPosition[0] > width + 1) ]
 
     closestInvaderDist = 999999
     closestNextInvaderDist = 999999
@@ -940,7 +942,7 @@ class QLearningDefensiveAgent(QLearningCaptureAgent):
         else:
           reward -= self.homeDistanceScaler * gameState.getAgentState(self.index).numCarrying / max(distanceToHome, 0.0000000000000000001)
         if gameState.data.timeleft < 200:
-          self.foodDistanceScaler = 0
+          self.foodDistanceScaler = 0.1
           self.homeDistanceScaler = 99999999999999
 
     

@@ -4,10 +4,10 @@ from IPython.display import HTML, display, clear_output
 import json
 from tqdm import tqdm
 
-offensive_params = json.load(open("offensiveParams3.json", 'r'))
-defensive_params = json.load(open("defensiveParams3.json", 'r'))
+# offensive_params = json.load(open("offensiveParams3.json", 'r'))
+defensive_params = json.load(open("defensiveParams_base.json", 'r'))
 
-num_episodes = offensive_params["num_episodes"]
+num_episodes = defensive_params["num_episodes"]
 total_episodes = 10000
 
 # Function to display captured output
@@ -17,6 +17,7 @@ def show_output(output):
 
 red = True
 i = 0
+# agents = ["myTeam2"]
 agents = ["myTeamApproxQLearningAgent", "myTeam2", "myTeam", "baselineTeam", "myTeamOffense", "myTeamDefense"]
 # Function to run the capture.py command for a given episode
 # Function to run the capture.py command for a given episode
@@ -44,13 +45,13 @@ with tqdm(initial=num_episodes, total=total_episodes, desc=f"Training for {total
         return_code = run_episode(episode)
         
         if return_code == 0:
-            offensive_params = json.load(open("offensiveParams3.json", 'r'))
-            defensive_params = json.load(open("defensiveParams3.json", 'r'))
+            # offensive_params = json.load(open("offensiveParams3.json", 'r'))
+            defensive_params = json.load(open("defensiveParams_base.json", 'r'))
             clear_output()
             red = not red
-            if offensive_params["num_episodes"] % 100 == 0:
+            if defensive_params["num_episodes"] % 100 == 0:
                 subprocess.run("git add *")
-                subprocess.run(f"git commit -m Trained for {offensive_params['num_episodes']} episodes")
+                subprocess.run(f"git commit -m Trained for {defensive_params['num_episodes']} episodes")
                 subprocess.run("git push")
         else:
             print(f"Error in episode {episode + 1}. Exiting.")
