@@ -1164,8 +1164,8 @@ if __name__ == '__main__':
   save_score(games[0])
   print('\nTotal Time Game: %s'% round(time.time() - start_time, 0))
   
-  update_parameters("offensiveParams.json")
-  update_parameters("defensiveParams.json")
+  update_parameters("offensiveParams2.json")
+  update_parameters("defensiveParams2.json")
   print("Updated parameters")
   # import profile
   # profile.run('runGames( **options )', 'profile')

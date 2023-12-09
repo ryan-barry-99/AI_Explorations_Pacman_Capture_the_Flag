@@ -51,6 +51,14 @@ def createTeam(firstIndex, secondIndex, isRed,
 RED = 0
 BLUE = 1
 
+class FriendlyTracker(CaptureAgent):
+  def __init__(self):
+    pass
+  
+class OpponentTracker(CaptureAgent):
+  def __init__(self):
+    pass
+
 class QLearningCaptureAgent(CaptureAgent): 
   def __init__(self, index):
     CaptureAgent.__init__(self, index)
@@ -78,8 +86,8 @@ class QLearningCaptureAgent(CaptureAgent):
     self.defensiveFoodDistanceScaler = 1
     self.homeDistanceScaler = 10.00001
     self.offensiveInvaderScaler = 15
-    self.defensiveInvaderScaler = 1000
-    self.capsuleDistanceScaler = 15
+    self.defensiveInvaderScaler = 15
+    self.capsuleDistanceScaler = 11
     self.teammateScaler = 1
     self.lastPos = None
     self.leaveHomeScaler = 1000
@@ -470,7 +478,7 @@ class QLearningCaptureAgent(CaptureAgent):
   
 class QLearningOffensiveAgent(QLearningCaptureAgent):
   def __init__(self, index):
-    self.param_json = 'offensiveParams3.json'
+    self.param_json = 'offensiveParams2.json'
     super().__init__(index)
     
 
@@ -494,80 +502,10 @@ class QLearningOffensiveAgent(QLearningCaptureAgent):
     reward -= enemies[0].numCarrying
     reward -= enemies[1].numCarrying
 
-    enemies = [gameState.getAgentState(i) for i in self.getOpponents(gameState)]
-    ghosts = [ghost for ghost in enemies if not ghost.isPacman and ghost.getPosition() is not None]
-    ghostPositions = [ghost.getPosition() for ghost in ghosts if ghost.getPosition() is not None]
-    closestInvaderDist = 999999
-    closestNextInvaderDist = 999999
-    
-      
-    invaders = [gameState.getAgentState(i) for i in self.getOpponents(gameState) if gameState.getAgentState(i).isPacman and gameState.getAgentState(i).getPosition() is not None]
-    invaderPositions = [invader.getPosition() for invader in invaders if invader.getPosition() is not None]
-    
-    distsToInvaders = [self.getMazeDistance(myPos, invader) for invader in invaderPositions if invaderPositions is not None]
-    distsToNextInvaders = [self.getMazeDistance(nextPos, invader) for invader in invaderPositions if invaderPositions is not None]
-
-    # Reward for getting closer to home
-    if self.color == RED:
-      width = int(gameState.data.layout.width/2 - 1)
-      equator = int(gameState.data.layout.height/2)
-      prime_meriderian = int((width)/2)
-
-
-    else:
-      width = int(gameState.data.layout.width/2 + 1)
-      equator = int(gameState.data.layout.height/2)
-      prime_meriderian = int((width)/2) + width
-
-
-    foodList = self.getFood(gameState).asList()
-
-    filteredFoodList = []
-    quads = [False, False, False, False]
-    for pos in ghostPositions:
-      if pos[0] <= prime_meriderian:
-        if pos[1] < equator:
-          quads[0] = True
-        else:
-          quads[1] = True
-      else:
-        if pos[1] < equator:
-          quads[2] = True
-        else:
-          quads[3] = True
+    minFoodDistance = 9999
     for food in foodList:
-      if food[0] <= prime_meriderian:
-        if food[1] < equator:
-          if quads[0]:
-            continue
-        else:
-          if quads[1]:
-            continue
-      else:
-        if food[1] < equator:
-          if quads[2]:
-            continue
-        else:
-          if quads[3]:
-            continue
-      filteredFoodList.append(food)
-    
-    if len(filteredFoodList) < 0:
-      distToFood = min([self.getMazeDistance(myPos, food) for food in filteredFoodList])
-      distToNextFood = min([self.getMazeDistance(nextPos, food) for food in filteredFoodList])
-    else:
-      distToFood = min([self.getMazeDistance(myPos, food) for food in foodList])
-      distToNextFood = min([self.getMazeDistance(nextPos, food) for food in foodList])
-    if distToNextFood < closestNextInvaderDist:
-      if distToFood > distToNextFood:
-        reward += self.foodDistanceScaler / max(distToNextFood, 0.1)
-      else:
-        reward -= self.foodDistanceScaler / max(distToNextFood, 0.1)
-    else:
-      if closestInvaderDist > closestNextInvaderDist:
-        reward += self.offensiveInvaderScaler / max(closestNextInvaderDist, 0.0001)
-      else:
-        reward -= self.offensiveInvaderScaler / max(closestNextInvaderDist, 0.0001)
+      if self.getMazeDistance(myPos, food) < minFoodDistance:
+        minFoodDistance = self.getMazeDistance(myPos, food)
         
     if not self.isInCorner(myPos, gameState):
       self.lastNonCorner = myPos
@@ -781,7 +719,7 @@ class QLearningOffensiveAgent(QLearningCaptureAgent):
   
 class QLearningDefensiveAgent(QLearningCaptureAgent):
   def __init__(self, index):
-    self.param_json = 'defensiveParams3.json'
+    self.param_json = 'defensiveParams2.json'
     super().__init__(index)
   
       
@@ -860,8 +798,7 @@ class QLearningDefensiveAgent(QLearningCaptureAgent):
     
     distsToInvaders = [self.getMazeDistance(myPos, invader) for invader in invaderPositions if invaderPositions is not None]
     distsToNextInvaders = [self.getMazeDistance(nextPos, invader) for invader in invaderPositions if invaderPositions is not None]
-    if len(invaders) > 0:
-    # if len(distsToInvaders) > 0 and len(distsToNextInvaders) > 0:
+    if len(distsToInvaders) > 0 and len(distsToNextInvaders) > 0:
       maxCarrying = 0
       for i, invader in enumerate(invaders):
         # reward -= invader.numCarrying ** 2
@@ -903,61 +840,9 @@ class QLearningDefensiveAgent(QLearningCaptureAgent):
           reward -= self.teammateScaler / max(minTeammateDist, 0.0001)  # Scaled by closeness to teammate
 
 
-      enemies = [gameState.getAgentState(i) for i in self.getOpponents(gameState)]
-      ghosts = [ghost for ghost in enemies if not ghost.isPacman and ghost.getPosition() is not None]
-      ghostPositions = [ghost.getPosition() for ghost in ghosts if ghost.getPosition() is not None]
-
-      # Reward for getting closer to home
-      if self.color == RED:
-        width = int(gameState.data.layout.width/2 - 1)
-        equator = int(gameState.data.layout.height/2)
-        prime_meriderian = int((width)/2)
-
-
-      else:
-        width = int(gameState.data.layout.width/2 + 1)
-        equator = int(gameState.data.layout.height/2)
-        prime_meriderian = int((width)/2) + width
-
-
       foodList = self.getFood(gameState).asList()
-
-      filteredFoodList = []
-      quads = [False, False, False, False]
-      for pos in ghostPositions:
-        if pos[0] <= prime_meriderian:
-          if pos[1] < equator:
-            quads[0] = True
-          else:
-            quads[1] = True
-        else:
-          if pos[1] < equator:
-            quads[2] = True
-          else:
-            quads[3] = True
-      for food in foodList:
-        if food[0] <= prime_meriderian:
-          if food[1] < equator:
-            if quads[0]:
-              continue
-          else:
-            if quads[1]:
-              continue
-        else:
-          if food[1] < equator:
-            if quads[2]:
-              continue
-          else:
-            if quads[3]:
-              continue
-        filteredFoodList.append(food)
-      
-      if len(filteredFoodList) < 0:
-        distToFood = min([self.getMazeDistance(myPos, food) for food in filteredFoodList])
-        distToNextFood = min([self.getMazeDistance(nextPos, food) for food in filteredFoodList])
-      else:
-        distToFood = min([self.getMazeDistance(myPos, food) for food in foodList])
-        distToNextFood = min([self.getMazeDistance(nextPos, food) for food in foodList])
+      distToFood = min([self.getMazeDistance(myPos, food) for food in foodList])
+      distToNextFood = min([self.getMazeDistance(nextPos, food) for food in foodList])
       if distToNextFood < closestNextInvaderDist:
         if distToFood > distToNextFood:
           reward += self.foodDistanceScaler / max(distToNextFood, 0.1)

@@ -26,7 +26,7 @@ import math
 #################
 
 def createTeam(firstIndex, secondIndex, isRed,
-               first = 'QLearningOffensiveAgent', second = 'QLearningOffensiveAgent'):
+               first = 'QLearningDefensiveAgent', second = 'QLearningDefensiveAgent'):
   """
   This function should return a list of two agents that will form the
   team, initialized using firstIndex and secondIndex as their agent
@@ -77,9 +77,9 @@ class QLearningCaptureAgent(CaptureAgent):
     self.foodDistanceScaler = 10
     self.defensiveFoodDistanceScaler = 1
     self.homeDistanceScaler = 10.00001
-    self.offensiveInvaderScaler = 15
-    self.defensiveInvaderScaler = 1000
-    self.capsuleDistanceScaler = 15
+    self.offensiveInvaderScaler = 100
+    self.defensiveInvaderScaler = 100
+    self.capsuleDistanceScaler = 11
     self.teammateScaler = 1
     self.lastPos = None
     self.leaveHomeScaler = 1000
@@ -497,15 +497,15 @@ class QLearningOffensiveAgent(QLearningCaptureAgent):
     enemies = [gameState.getAgentState(i) for i in self.getOpponents(gameState)]
     ghosts = [ghost for ghost in enemies if not ghost.isPacman and ghost.getPosition() is not None]
     ghostPositions = [ghost.getPosition() for ghost in ghosts if ghost.getPosition() is not None]
-    closestInvaderDist = 999999
-    closestNextInvaderDist = 999999
-    
-      
     invaders = [gameState.getAgentState(i) for i in self.getOpponents(gameState) if gameState.getAgentState(i).isPacman and gameState.getAgentState(i).getPosition() is not None]
     invaderPositions = [invader.getPosition() for invader in invaders if invader.getPosition() is not None]
     
+    closestNextInvaderDist = 999999
     distsToInvaders = [self.getMazeDistance(myPos, invader) for invader in invaderPositions if invaderPositions is not None]
     distsToNextInvaders = [self.getMazeDistance(nextPos, invader) for invader in invaderPositions if invaderPositions is not None]
+    if len(distsToNextInvaders) > 0:
+      closestNextInvaderDist = min(distsToNextInvaders)
+
 
     # Reward for getting closer to home
     if self.color == RED:
@@ -860,8 +860,7 @@ class QLearningDefensiveAgent(QLearningCaptureAgent):
     
     distsToInvaders = [self.getMazeDistance(myPos, invader) for invader in invaderPositions if invaderPositions is not None]
     distsToNextInvaders = [self.getMazeDistance(nextPos, invader) for invader in invaderPositions if invaderPositions is not None]
-    if len(invaders) > 0:
-    # if len(distsToInvaders) > 0 and len(distsToNextInvaders) > 0:
+    if len(distsToInvaders) > 0 and len(distsToNextInvaders) > 0:
       maxCarrying = 0
       for i, invader in enumerate(invaders):
         # reward -= invader.numCarrying ** 2
@@ -901,6 +900,7 @@ class QLearningDefensiveAgent(QLearningCaptureAgent):
           reward += self.teammateScaler / max(nextMinTeammateDist, 0.0001)
         elif minTeammateDist < nextMinTeammateDist:
           reward -= self.teammateScaler / max(minTeammateDist, 0.0001)  # Scaled by closeness to teammate
+
 
 
       enemies = [gameState.getAgentState(i) for i in self.getOpponents(gameState)]
@@ -952,12 +952,12 @@ class QLearningDefensiveAgent(QLearningCaptureAgent):
               continue
         filteredFoodList.append(food)
       
-      if len(filteredFoodList) < 0:
+      if len(filteredFoodList) > 0:
         distToFood = min([self.getMazeDistance(myPos, food) for food in filteredFoodList])
         distToNextFood = min([self.getMazeDistance(nextPos, food) for food in filteredFoodList])
       else:
         distToFood = min([self.getMazeDistance(myPos, food) for food in foodList])
-        distToNextFood = min([self.getMazeDistance(nextPos, food) for food in foodList])
+      distToNextFood = min([self.getMazeDistance(nextPos, food) for food in foodList])
       if distToNextFood < closestNextInvaderDist:
         if distToFood > distToNextFood:
           reward += self.foodDistanceScaler / max(distToNextFood, 0.1)

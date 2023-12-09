@@ -4,8 +4,8 @@ from IPython.display import HTML, display, clear_output
 import json
 from tqdm import tqdm
 
-offensive_params = json.load(open("offensiveParams.json", 'r'))
-defensive_params = json.load(open("defensiveParams.json", 'r'))
+offensive_params = json.load(open("offensiveParams3.json", 'r'))
+defensive_params = json.load(open("defensiveParams3.json", 'r'))
 
 num_episodes = offensive_params["num_episodes"]
 total_episodes = 10000
@@ -16,19 +16,19 @@ def show_output(output):
 
 
 red = True
-agents = ["myTeamApproxQLearningAgent", "myTeam2", "myTeam", "baselineTeam"]
+i = 0
+agents = ["myTeamApproxQLearningAgent", "myTeam2", "myTeam", "baselineTeam", "myTeamOffense", "myTeamDefense"]
 # Function to run the capture.py command for a given episode
 # Function to run the capture.py command for a given episode
 def run_episode(episode):
-    global red
-    i = 0
+    global red, i
     if red:
-        command = f"python capture.py -r {agents[i]} -b myteam --delay-step 0 -q"
+        command = f"python capture.py -r {agents[i]} -b myteamdefense --delay-step 0 -q"
     else:
-        command = f"python capture.py -r myteam -b {agents[i]} --delay-step 0 -q"
+        command = f"python capture.py -r myteamdefense -b {agents[i]} --delay-step 0 -q"
     if not red:
         i += 1
-        if i == 4:
+        if i == len(agents):
             i = 0
     # command = f"python capture.py -r myteam -b myteam --delay-step 0 -q"
     result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
@@ -44,8 +44,8 @@ with tqdm(initial=num_episodes, total=total_episodes, desc=f"Training for {total
         return_code = run_episode(episode)
         
         if return_code == 0:
-            offensive_params = json.load(open("offensiveParams.json", 'r'))
-            defensive_params = json.load(open("defensiveParams.json", 'r'))
+            offensive_params = json.load(open("offensiveParams3.json", 'r'))
+            defensive_params = json.load(open("defensiveParams3.json", 'r'))
             clear_output()
             red = not red
             if offensive_params["num_episodes"] % 100 == 0:
