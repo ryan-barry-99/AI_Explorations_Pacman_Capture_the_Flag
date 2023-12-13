@@ -56,12 +56,47 @@ class QLearningCaptureAgent(CaptureAgent):
     CaptureAgent.__init__(self, index)
     self.index = index
     self.params = json.load(open(self.param_json, 'r'))
-    self.weights = self.params["weights"]
-    self.params["total_reward"].append(0)
-    self.params["num_episodes"] += 1
-    self.epsilon = self.params["epsilon"][-1]  # Exploration rate
-    self.alpha = self.params["alpha"][-1]      # Learning rate
-    self.discount = self.params["discount"][-1] # Discount factor
+    self.weights = {
+    "onDefense": 0.0,
+    "stop": 0.0,
+    "enemy1_num_carried": 0.0,
+    "enemy2_num_carried": 0.0,
+    "reverse": -0.001003003002688783,
+    "invaderDistance": 1.0,
+    "distance_to_start": -0.04212612611326433,
+    "num_invaders": 0.0,
+    "distance_from_middle": -0.0010030030025964694,
+    "distance_from_closest_invader": 1.0000000001e-10,
+    "scared_distance": -0.02006005964219003,
+    "distance_to_home": -0.0040120120105864784,
+    "invader_captured": 1.0,
+    "food_protected": -0.0030090090080903092,
+    "ambush_location_x": 1.0,
+    "ambush_location_y": 1.0,
+    "teammate_location_x": -0.010030030026967698,
+    "teammate_location_y": -0.013039039035058007,
+    "opponent1_location_x": -0.0010030029820994712,
+    "opponent1_location_y": -0.006018017892596828,
+    "opponent2_location_x": -0.0010030029820994712,
+    "opponent2_location_y": -0.003009008946298414,
+    "successor_score": 0.0,
+    "num_ghosts_one_step_away": 0.0,
+    "distance_from_closest_ghost": 0.0,
+    "is_home": 0.0,
+    "distanceToFood": 0.0,
+    "food_eaten": 0.0,
+    "avoided_ghost": -0.019057038194573706,
+    "carrying_food": 0.0,
+    "distance_to_capsule": 0.0,
+    "game_score": -0.011033033029664466,
+    "teammate_food_carried": -0.0060180180161806185,
+    "bias": -0.0010030030026967698
+}
+    # self.params["total_reward"].append(0)
+    # self.params["num_episodes"] += 1
+    self.epsilon = 0
+    self.alpha = 0.1
+    self.discount = 0.9
     # Initialize variables
     self.total_reward = 0
     self.previous_position = None
@@ -77,10 +112,10 @@ class QLearningCaptureAgent(CaptureAgent):
     self.foodDistanceScaler = 10
     self.defensiveFoodDistanceScaler = 1
     self.homeDistanceScaler = 10.000000000000000001
-    self.offensiveInvaderScaler = 99999999
-    self.defensiveInvaderScaler = 99999999
+    self.offensiveInvaderScaler = 10
+    self.defensiveInvaderScaler = 10
     self.capsuleDistanceScaler = 11
-    self.teammateScaler = 1
+    self.teammateScaler = 5
     self.lastPos = None
     self.leaveHomeScaler = 1000
     self.lastNonCorner = None
@@ -171,7 +206,7 @@ class QLearningCaptureAgent(CaptureAgent):
        reward -= 0.1
     self.qValues[(current_position, action)] = (1 - self.alpha) * self.getQValue(gameState, action) + self.alpha * (reward + self.discount * self.getMaxQ(successor)[0])
     self.previous_position = current_position
-    self.updateWeights(gameState, action)
+    # self.updateWeights(gameState, action)
 
 
   def getMaxQ(self, gameState):
@@ -581,8 +616,10 @@ class QLearningOffensiveAgent(QLearningCaptureAgent):
           maxCarrying = invader.numCarrying
           invaderDist = self.getMazeDistance(myPos, invaderPositions[i])
           nextInvaderDist = self.getMazeDistance(nextPos, invaderPositions[i])
-        invaderDist = min(distsToInvaders)
-        nextInvaderDist = min(distsToNextInvaders)
+
+        
+        # invaderDist = min(distsToInvaders)
+        # nextInvaderDist = min(distsToNextInvaders)
       if maxCarrying > 5:
         if nextState.getAgentState(self.index).scaredTimer == 0:
           if invaderDist > nextInvaderDist:
@@ -713,12 +750,13 @@ class QLearningOffensiveAgent(QLearningCaptureAgent):
   
 class QLearningDefensiveAgent(QLearningCaptureAgent):
   def __init__(self, index):
-    self.param_json = 'defensiveParams_base.json'
+    self.param_json = 'defensiveParams2.json'
     super().__init__(index)
   
       
       
   def getReward(self, gameState, nextState):
+    FirstInvader=False
     """
     Get the reward for the defensive agent
     """
@@ -776,7 +814,7 @@ class QLearningDefensiveAgent(QLearningCaptureAgent):
     nextdistanceToHome = self.getMazeDistance(nextPos, (width, minHeight))
     distanceToHome = self.getMazeDistance(myPos, (width, minHeight))
 
-    invaders = [gameState.getAgentState(i) for i in self.getOpponents(gameState) if gameState.getAgentState(i).isPacman and gameState.getAgentState(i).getPosition() is not None and gameState.getAgentState(i).scaredTimer == 0]
+    invaders = [gameState.getAgentState(i) for i in self.getOpponents(gameState) if gameState.getAgentState(i).isPacman and gameState.getAgentState(i).scaredTimer == 0]
     invaderPositions = [invader.getPosition() for invader in invaders if invader.getPosition() is not None]
   
     closestInvaderDist = 999999
@@ -784,180 +822,206 @@ class QLearningDefensiveAgent(QLearningCaptureAgent):
     
     distsToInvaders = [self.getMazeDistance(myPos, invader) for invader in invaderPositions if invaderPositions is not None]
     distsToNextInvaders = [self.getMazeDistance(nextPos, invader) for invader in invaderPositions if invaderPositions is not None]
+    print(gameState.getAgentPosition(1))
     if len(invaders) > 0:
+      # print("here")
       # if len(distsToInvaders) > 0 and len(distsToNextInvaders) > 0:
       maxCarrying = 0
+      self.foodDistanceScaler = 0
       for i, invader in enumerate(invaders):
         # reward -= invader.numCarrying ** 2
-        try:
-          if invader.numCarrying > maxCarrying:
-            maxCarrying = invader.numCarrying
-            invaderDist = self.getMazeDistance(myPos, invaderPositions[i])
-            nextInvaderDist = self.getMazeDistance(nextPos, invaderPositions[i])
-        except:
-          print(f"Well fuck me, here's Invader: {invader}, i: {i}, and invader positions: {invaderPositions}")
-          continue
-        invaderDist = min(distsToInvaders)
-        nextInvaderDist = min(distsToNextInvaders)
+          # if invader.numCarrying > maxCarrying:
+          maxCarrying = invader.numCarrying
+          invaderDist = self.getMazeDistance(myPos, invaderPositions[i])
+          nextInvaderDist = self.getMazeDistance(nextPos, invaderPositions[i])
+          # else:
+          #   invaderDist = min(distsToInvaders)
+          #   nextInvaderDist = min(distsToNextInvaders)
       if nextState.getAgentState(self.index).scaredTimer == 0:
         if invaderDist > nextInvaderDist:
           reward += self.defensiveInvaderScaler / max(nextInvaderDist, 0.0001)
         else:
           reward -= self.defensiveInvaderScaler / max(nextInvaderDist, 0.0001)
       else:
-        if invaderDist > nextInvaderDist + 1:
+        # print(invaderDist, nextInvaderDist)
+        if invaderDist > nextInvaderDist:
           reward += self.defensiveInvaderScaler / max(invaderDist, 0.0001)
         else:
           reward -= self.defensiveInvaderScaler / max(invaderDist, 0.0001)
+      FirstInvader = True
     else:
-      # Add negative reward for being near teammate
-      teammates = self.getTeam(gameState)
-      teammatePositions = [gameState.getAgentPosition(i) for i in teammates if i != self.index]
-      minTeammateDist = min([self.getMazeDistance(myPos, pos) for pos in teammatePositions])
-      nextMinTeammateDist = min([self.getMazeDistance(nextPos, pos) for pos in teammatePositions])
-      if not isHome:
-        if minTeammateDist > nextMinTeammateDist:
-          reward -= self.teammateScaler / max(nextMinTeammateDist, 0.0001)
-        elif minTeammateDist < nextMinTeammateDist:
-          reward += self.teammateScaler / max(minTeammateDist, 0.0001)  # Scaled by closeness to teammate
+      distToCenter = self.getMazeDistance(myPos, (width, height/2))
+      nextDistToCenter = self.getMazeDistance(nextPos, (width, height/2))
+      if distToCenter > nextDistToCenter:
+        reward += self.offensiveInvaderScaler / max(nextDistToCenter, 0.0001)
       else:
-        if minTeammateDist > nextMinTeammateDist:
-          reward += self.teammateScaler / max(nextMinTeammateDist, 0.0001)
-        elif minTeammateDist < nextMinTeammateDist:
-          reward -= self.teammateScaler / max(minTeammateDist, 0.0001)  # Scaled by closeness to teammate
+        reward -= self.offensiveInvaderScaler / max(nextDistToCenter, 0.0001)
+    #   invaders = []
+    #   # # if FirstInvader:
+    #   # print("no invaders")
+    #   self.foodDistanceScaler = 10
+    #   # Add negative reward for being near teammate
+    #   teammates = self.getTeam(gameState)
+    #   teammatePositions = [gameState.getAgentPosition(i) for i in teammates if i != self.index]
+    #   minTeammateDist = min([self.getMazeDistance(myPos, pos) for pos in teammatePositions])
+    #   nextMinTeammateDist = min([self.getMazeDistance(nextPos, pos) for pos in teammatePositions])
+    #   if not isHome:
+    #     if minTeammateDist > nextMinTeammateDist:
+    #       reward -= self.teammateScaler / max(nextMinTeammateDist, 0.0001)
+    #     elif minTeammateDist < nextMinTeammateDist:
+    #       reward += self.teammateScaler / max(minTeammateDist, 0.0001)  # Scaled by closeness to teammate
+    #   else:
+    #     if minTeammateDist > nextMinTeammateDist:
+    #       reward += self.teammateScaler / max(nextMinTeammateDist, 0.0001)
+    #     elif minTeammateDist < nextMinTeammateDist:
+    #       reward -= self.teammateScaler / max(minTeammateDist, 0.0001)  # Scaled by closeness to teammate
 
 
 
-      enemies = [gameState.getAgentState(i) for i in self.getOpponents(gameState)]
-      ghosts = [ghost for ghost in enemies if not ghost.isPacman and ghost.getPosition() is not None]
-      ghostPositions = [ghost.getPosition() for ghost in ghosts if ghost.getPosition() is not None]
-      if len(ghosts) > 0:
-        closestGhostIndex = 0
-        minNextGhostDist = 999
-        minGhostDist = 999
-        for i, ghost in enumerate(ghosts):
-          if self.getMazeDistance(myPos, ghost.getPosition()) < minGhostDist:
-            minGhostDist = self.getMazeDistance(myPos, ghost.getPosition())
-            closestGhostIndex = i
-        minNextGhostDist = min([self.getMazeDistance(nextPos, ghost.getPosition()) for ghost in ghosts])
-        closestGhostToTeammate = min([self.getMazeDistance(teammatePositions[0], ghost.getPosition()) for ghost in ghosts for teammate in teammatePositions])
-        if closestGhostToTeammate < 3:
-          self.capsuleDistanceScaler = 100
-        else:
-          self.capsuleDistanceScaler = 11
-        if ghosts[closestGhostIndex].scaredTimer == 0:
-          if minGhostDist > minNextGhostDist:
-            reward -= self.offensiveInvaderScaler / max(minNextGhostDist, 0.0001)
-          elif minGhostDist < minNextGhostDist:
-            reward += self.offensiveInvaderScaler / max(minNextGhostDist, 0.0001)
-        else:
-          if minGhostDist > minNextGhostDist:
-            reward += self.offensiveInvaderScaler / max(minNextGhostDist, 0.0001)
-          elif minGhostDist < minNextGhostDist:
-            reward -= self.offensiveInvaderScaler / max(minNextGhostDist, 0.0001)
-        if self.isInCorner(nextPos, gameState):
-          if minGhostDist > minNextGhostDist and minNextGhostDist < 8 and not isHome:
-            reward -= 10 / max(minNextGhostDist, 0.0001)
-          elif minGhostDist < minNextGhostDist and minNextGhostDist < 8 and not isHome:
-            reward += 10 / max(minNextGhostDist, 0.0001)
+    #   enemies = [gameState.getAgentState(i) for i in self.getOpponents(gameState)]
+    #   ghosts = [ghost for ghost in enemies if not ghost.isPacman and ghost.getPosition() is not None]
+    #   ghostPositions = [ghost.getPosition() for ghost in ghosts if ghost.getPosition() is not None]
+    #   if len(ghosts) > 0:
+    #     closestGhostIndex = 0
+    #     minNextGhostDist = 999
+    #     minGhostDist = 999
+    #     for i, ghost in enumerate(ghosts):
+    #       if self.getMazeDistance(myPos, ghost.getPosition()) < minGhostDist:
+    #         minGhostDist = self.getMazeDistance(myPos, ghost.getPosition())
+    #         closestGhostIndex = i
+    #     minNextGhostDist = min([self.getMazeDistance(nextPos, ghost.getPosition()) for ghost in ghosts])
+    #     closestGhostToTeammate = min([self.getMazeDistance(teammatePositions[0], ghost.getPosition()) for ghost in ghosts for teammate in teammatePositions])
+    #     if closestGhostToTeammate < 3:
+    #       self.capsuleDistanceScaler = 100
+    #     else:
+    #       self.capsuleDistanceScaler = 11
+    #     if ghosts[closestGhostIndex].scaredTimer == 0:
+    #       if minGhostDist > minNextGhostDist:
+    #         reward -= self.offensiveInvaderScaler / max(minNextGhostDist, 0.0001)
+    #       elif minGhostDist < minNextGhostDist:
+    #         reward += self.offensiveInvaderScaler / max(minNextGhostDist, 0.0001)
+    #     else:
+    #       if minGhostDist > minNextGhostDist:
+    #         reward += self.offensiveInvaderScaler / max(minNextGhostDist, 0.0001)
+    #       elif minGhostDist < minNextGhostDist:
+    #         reward -= self.offensiveInvaderScaler / max(minNextGhostDist, 0.0001)
+    #     if self.isInCorner(nextPos, gameState):
+    #       if minGhostDist > minNextGhostDist and minNextGhostDist < 8 and not isHome:
+    #         reward -= 10 / max(minNextGhostDist, 0.0001)
+    #       elif minGhostDist < minNextGhostDist and minNextGhostDist < 8 and not isHome:
+    #         reward += 10 / max(minNextGhostDist, 0.0001)
 
 
-      # Reward for getting closer to home
-      if self.color == RED:
-        width = int(gameState.data.layout.width/2 - 1)
-        equator = int(gameState.data.layout.height/2)
-        prime_meriderian = int((width)/2)
+    #   # Reward for getting closer to home
+    #   if self.color == RED:
+    #     width = int(gameState.data.layout.width/2 - 1)
+    #     equator = int(gameState.data.layout.height/2)
+    #     prime_meriderian = int((width)/2)
 
 
-      else:
-        width = int(gameState.data.layout.width/2 + 1)
-        equator = int(gameState.data.layout.height/2)
-        prime_meriderian = int((width)/2) + width
+    #   else:
+    #     width = int(gameState.data.layout.width/2 + 1)
+    #     equator = int(gameState.data.layout.height/2)
+    #     prime_meriderian = int((width)/2) + width
 
 
-      foodList = self.getFood(gameState).asList()
+    #   foodList = self.getFood(gameState).asList()
 
-      filteredFoodList = []
-      quads = [False, False, False, False]
-      for pos in ghostPositions:
-        if pos[0] <= prime_meriderian:
-          if pos[1] < equator:
-            quads[0] = True
-          else:
-            quads[1] = True
-        else:
-          if pos[1] < equator:
-            quads[2] = True
-          else:
-            quads[3] = True
-      for food in foodList:
-        if food[0] <= prime_meriderian:
-          if food[1] < equator:
-            if quads[0]:
-              continue
-          else:
-            if quads[1]:
-              continue
-        else:
-          if food[1] < equator:
-            if quads[2]:
-              continue
-          else:
-            if quads[3]:
-              continue
-        filteredFoodList.append(food)
+    #   filteredFoodList = []
+    #   quads = [False, False, False, False]
+    #   ghostNearby = False
+    #   for pos in ghostPositions:
+    #     if pos[0] <= prime_meriderian:
+    #       if pos[1] < equator:
+    #         quads[0] = True
+    #         if myPos[0] <= prime_meriderian and myPos[1] < equator:
+    #           ghostNearby = True
+    #       else:
+    #         quads[1] = True
+    #         if myPos[0] > prime_meriderian and myPos[1] < equator:
+    #           ghostNearby = True
+    #     else:
+    #       if pos[1] < equator:
+    #         quads[2] = True
+    #         if myPos[0] <= prime_meriderian and myPos[1] > equator:
+    #           ghostNearby = True
+    #       else:
+    #         quads[3] = True
+    #         if myPos[0] > prime_meriderian and myPos[1] > equator: 
+    #           ghostNearby = True
+    #   if ghostNearby:
+    #     self.homeDistanceScaler = 999999999999999999999999999999999999999999999999999999999999999
+    #   else:
+    #     self.homeDistanceScaler = 10.000000000000000001
+        
+    #   for food in foodList:
+    #     if food[0] <= prime_meriderian:
+    #       if food[1] < equator:
+    #         if quads[0]:
+    #           continue
+    #       else:
+    #         if quads[1]:
+    #           continue
+    #     else:
+    #       if food[1] < equator:
+    #         if quads[2]:
+    #           continue
+    #       else:
+    #         if quads[3]:
+    #           continue
+    #     filteredFoodList.append(food)
 
-      if len(filteredFoodList) < 0:
-        distToFood = min([self.getMazeDistance(myPos, food) for food in filteredFoodList])
-        distToNextFood = min([self.getMazeDistance(nextPos, food) for food in filteredFoodList])
-      else:
-        distToFood = min([self.getMazeDistance(myPos, food) for food in foodList])
-        distToNextFood = min([self.getMazeDistance(nextPos, food) for food in foodList])
-      if distToNextFood < closestNextInvaderDist:
-        if distToFood > distToNextFood:
-          reward += self.foodDistanceScaler / max(distToNextFood, 0.1)
-        else:
-          reward -= self.foodDistanceScaler / max(distToNextFood, 0.1)
-      else:
-        if closestInvaderDist > closestNextInvaderDist:
-          reward += self.offensiveInvaderScaler / max(closestNextInvaderDist, 0.0001)
-        else:
-          reward -= self.offensiveInvaderScaler / max(closestNextInvaderDist, 0.0001)
+    #   if len(filteredFoodList) < 0:
+    #     distToFood = min([self.getMazeDistance(myPos, food) for food in filteredFoodList])
+    #     distToNextFood = min([self.getMazeDistance(nextPos, food) for food in filteredFoodList])
+    #   else:
+    #     distToFood = min([self.getMazeDistance(myPos, food) for food in foodList])
+    #     distToNextFood = min([self.getMazeDistance(nextPos, food) for food in foodList])
+    #   if distToNextFood < closestNextInvaderDist:
+    #     if distToFood > distToNextFood:
+    #       reward += self.foodDistanceScaler / max(distToNextFood, 0.1)
+    #     else:
+    #       reward -= self.foodDistanceScaler / max(distToNextFood, 0.1)
+    #   else:
+    #     if closestInvaderDist > closestNextInvaderDist:
+    #       reward += self.offensiveInvaderScaler / max(closestNextInvaderDist, 0.0001)
+    #     else:
+    #       reward -= self.offensiveInvaderScaler / max(closestNextInvaderDist, 0.0001)
 
-      minDistanceToHome = 9999
-      minHeight = 0
-      for height in range(1, gameState.data.layout.height):
-        try:
-          distanceToHome = self.getMazeDistance(nextPos, (width , height))
-          if distanceToHome < minDistanceToHome:
-            minDistanceToHome = distanceToHome
-            minHeight = height
-        except:
-          continue
-      if gameState.getAgentState(self.index).numCarrying > 0:
-        nextdistanceToHome = self.getMazeDistance(nextPos, (width, minHeight))
-        distanceToHome = self.getMazeDistance(myPos, (width, minHeight))
-        if nextdistanceToHome < distanceToHome:
-          reward += self.homeDistanceScaler * gameState.getAgentState(self.index).numCarrying / max(distanceToHome, 0.0000000000000000001)
-        else:
-          reward -= self.homeDistanceScaler * gameState.getAgentState(self.index).numCarrying / max(distanceToHome, 0.0000000000000000001)
-        if gameState.data.timeleft < 200:
-          self.foodDistanceScaler = 0.1
-          self.homeDistanceScaler = 99999999999999
+    #   minDistanceToHome = 9999
+    #   minHeight = 0
+    #   for height in range(1, gameState.data.layout.height):
+    #     try:
+    #       distanceToHome = self.getMazeDistance(nextPos, (width , height))
+    #       if distanceToHome < minDistanceToHome:
+    #         minDistanceToHome = distanceToHome
+    #         minHeight = height
+    #     except:
+    #       continue
+    #   if gameState.getAgentState(self.index).numCarrying > 0:
+    #     nextdistanceToHome = self.getMazeDistance(nextPos, (width, minHeight))
+    #     distanceToHome = self.getMazeDistance(myPos, (width, minHeight))
+    #     if nextdistanceToHome < distanceToHome:
+    #       reward += self.homeDistanceScaler * gameState.getAgentState(self.index).numCarrying / max(distanceToHome, 0.0000000000000000001)
+    #     else:
+    #       reward -= self.homeDistanceScaler * gameState.getAgentState(self.index).numCarrying / max(distanceToHome, 0.0000000000000000001)
+    #     if gameState.data.timeleft < 200:
+    #       self.foodDistanceScaler = 0.1
+    #       self.homeDistanceScaler = 99999999999999
 
     
-      # Distance to capsules
-      capsules = self.getCapsules(gameState) 
+    #   # Distance to capsules
+    #   capsules = self.getCapsules(gameState) 
 
-      if len(capsules) > 0: # This should always be True,  but better safe than sorry
-          myPos = nextState.getAgentState(self.index).getPosition()
-          minDistanceToCapsule = min([self.getMazeDistance(nextPos, capsule) for capsule in capsules])
-          reward += self.capsuleDistanceScaler / max(minDistanceToCapsule, 0.0001)
+    #   if len(capsules) > 0: # This should always be True,  but better safe than sorry
+    #       myPos = nextState.getAgentState(self.index).getPosition()
+    #       minDistanceToCapsule = min([self.getMazeDistance(nextPos, capsule) for capsule in capsules])
+    #       reward += self.capsuleDistanceScaler / max(minDistanceToCapsule, 0.0001)
 
 
-      ghosts = [ghost for ghost in enemies if not ghost.isPacman and ghost.getPosition() is not None]
-      if len(ghosts) > 0:
-        reward += self.defensiveInvaderScaler / max(min([self.getMazeDistance(myPos, ghost.getPosition()) for ghost in ghosts]), 0.0001)
+    #   ghosts = [ghost for ghost in enemies if not ghost.isPacman and ghost.getPosition() is not None]
+    #   if len(ghosts) > 0:
+    #     reward += self.defensiveInvaderScaler / max(min([self.getMazeDistance(myPos, ghost.getPosition()) for ghost in ghosts]), 0.0001)
 
     # for catching invaders 
     if self.gotCaptured(gameState):
@@ -975,8 +1039,8 @@ class QLearningDefensiveAgent(QLearningCaptureAgent):
         else:
           reward -= self.capsuleDistanceScaler / max(minDistanceToCapsule, 0.0001)
 
-    self.params["total_reward"][-1] += reward
-    self.params["latest_reward"] = self.params["total_reward"][-1]
-    self.save_weights()
+    # self.params["total_reward"][-1] += reward
+    # self.params["latest_reward"] = self.params["total_reward"][-1]
+    # self.save_weights()
     return reward
   

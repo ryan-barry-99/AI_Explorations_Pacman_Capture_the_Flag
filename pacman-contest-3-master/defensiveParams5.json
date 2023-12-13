@@ -1,0 +1,67 @@
+{
+    "weights": {
+        "onDefense": -0.0015000000111251805,
+        "stop": 0.0,
+        "enemy1_num_carried": -1.8000000797806953e-152,
+        "enemy2_num_carried": -0.0015000000111251805,
+        "teammate_food_carried": -0.0,
+        "reverse": -0.0015000000111251805,
+        "invaderDistance": -0.004500000033375542,
+        "distance_to_start": -0.045000000334055414,
+        "num_invaders": -0.0015000000111251805,
+        "distance_from_middle": -0.006000000044350722,
+        "distance_from_closest_invader": -0.004500000033375542,
+        "scared_distance": -0.004000000078209305,
+        "distance_to_home": -0.027000000200253248,
+        "invader_captured": -0.0020000000856452167,
+        "food_protected": -0.012000000089001444,
+        "ambush_location_x": -0.02850000021137843,
+        "ambush_location_y": -0.006000000044500722,
+        "teammate_location_x": -0.02850000021137843,
+        "teammate_location_y": -0.003000000022250361,
+        "opponent1_location_x": -0.02400000263155839,
+        "opponent1_location_y": -0.0030000003289447985,
+        "opponent2_location_x": -0.02550000279603079,
+        "opponent2_location_y": -0.0015000001644723993,
+        "successor_score": 0.0,
+        "num_ghosts_one_step_away": 0.0,
+        "distance_from_closest_ghost": 0.0,
+        "is_home": 0.0,
+        "distanceToFood": 0.0,
+        "food_eaten": 0.0,
+        "avoided_ghost": -0.0030000000699571495,
+        "carrying_food": 0.0,
+        "distance_to_capsule": 0.0,
+        "game_score": -0.006000000044500722,
+        "bias": -0.0015000000111251805
+    },
+    "base": {
+        "epsilon": 0.6,
+        "alpha": 0.1,
+        "discount": 0.9
+    },
+    "current": {
+        "epsilon": 0.6,
+        "alpha": 0.1,
+        "discount": 0.9
+    },
+    "num_episodes": 3848,
+    "latest_reward": -157200888182.9264,
+    "epsilon": [
+        0
+    ],
+    "alpha": [
+        0.1
+    ],
+    "discount": [
+        0.9
+    ],
+    "total_reward": [
+        -60595405363.17146,
+        3.809523809523812e+62,
+        -125948663548.49438,
+        -9200009233.618223,
+        -67589373830.19395,
+        -157200888182.9264
+    ]
+}

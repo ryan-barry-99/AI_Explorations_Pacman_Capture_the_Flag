@@ -5,10 +5,10 @@ import json
 from tqdm import tqdm
 
 # offensive_params = json.load(open("offensiveParams3.json", 'r'))
-defensive_params = json.load(open("defensiveParams_base.json", 'r'))
+defensive_params = json.load(open("defensiveParams6.json", 'r'))
 
 num_episodes = defensive_params["num_episodes"]
-total_episodes = 10000
+total_episodes = 4000
 
 # Function to display captured output
 def show_output(output):
@@ -24,9 +24,9 @@ agents = ["myTeamApproxQLearningAgent", "myTeam2", "myTeam", "baselineTeam", "my
 def run_episode(episode):
     global red, i
     if red:
-        command = f"python capture.py -r {agents[i]} -b myteamdefense --delay-step 0 -q"
+        command = f"python capture.py -r ryan_jack_team -b ryan_jack_team --delay-step 0 --layout RANDOM -q"
     else:
-        command = f"python capture.py -r myteamdefense -b {agents[i]} --delay-step 0 -q"
+        command = f"python capture.py -r ryan_jack_team -b ryan_jack_team --delay-step 0 --layout RANDOM -q"
     if not red:
         i += 1
         if i == len(agents):
